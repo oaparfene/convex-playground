@@ -42,6 +42,7 @@ import { Ellipsis, Filter, Search, UserRoundPlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
+import { Registry } from '@/lib/registry';
 
 interface DynamicDataGridProps {
   tableName: string;
@@ -167,6 +168,53 @@ function renderCellContent(value: any, fieldName: string): React.ReactNode {
   return <span>{stringValue}</span>;
 }
 
+// Render cell content using meta schema field definition
+function renderCellFromMeta(fieldName: string, value: any, tableName: string): React.ReactNode {
+  if (value === null || value === undefined) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {value.map((item, index) => (
+          <Badge key={index} variant="secondary" size="sm">
+            {typeof item === 'object' ? JSON.stringify(item) : String(item)}
+          </Badge>
+        ))}
+      </div>
+    );
+  }
+
+  // Objects
+  if (typeof value === 'object') {
+    return <span className="font-mono text-xs">{JSON.stringify(value)}</span>;
+  }
+
+  // Numbers
+  if (typeof value === 'number') {
+    return <span className="font-mono">{value}</span>;
+  }
+
+  // Booleans
+  if (typeof value === 'boolean') {
+    return (
+      <Badge variant={value ? 'primary' : 'secondary'} size="sm">
+        {value ? 'Yes' : 'No'}
+      </Badge>
+    );
+  }
+
+  // Strings
+  const stringValue = String(value);
+  if (fieldName.toLowerCase().includes('time') || fieldName.toLowerCase().includes('date')) {
+    const d = new Date(stringValue);
+    if (!isNaN(d.getTime())) return <span className="font-mono">{d.toLocaleString()}</span>;
+  }
+  return <span>{stringValue}</span>;
+}
+
 // Generate columns dynamically based on the data structure
 function generateColumnsFromData(data: Record<string, any>[], tableName: string): ColumnDef<Record<string, any>>[] {
   if (!data || data.length === 0) {
@@ -250,6 +298,60 @@ function generateColumnsFromData(data: Record<string, any>[], tableName: string)
   return columns;
 }
 
+// Generate columns from registry meta schema
+function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, any>>[] {
+  const meta = Registry.describe().tables[tableName];
+  if (!meta) return [];
+
+  const columns: ColumnDef<Record<string, any>>[] = [
+    {
+      accessorKey: '_id',
+      id: 'select',
+      header: () => <DataGridTableRowSelectAll />,
+      cell: ({ row }) => <DataGridTableRowSelect row={row} />,
+      enableSorting: false,
+      size: 35,
+      meta: { headerClassName: '', cellClassName: '' },
+      enableResizing: false,
+    },
+  ];
+
+  // Sort fields: _id first, then others alphabetically
+  const fieldEntries = Object.entries(meta.fields);
+  fieldEntries.sort(([a], [b]) => {
+    if (a === '_id') return -1;
+    if (b === '_id') return 1;
+    return a.localeCompare(b);
+  });
+
+  for (const [key, field] of fieldEntries) {
+    columns.push({
+      accessorKey: key,
+      id: key,
+      header: ({ column }) => (
+        <DataGridColumnHeader title={field.render?.label || formatFieldName(key)} visibility={true} column={column} />
+      ),
+      cell: ({ row }) => renderCellFromMeta(key, row.original[key], tableName),
+      size: 150,
+      enableSorting: true,
+      enableHiding: true,
+      enableResizing: true,
+    });
+  }
+
+  columns.push({
+    id: 'actions',
+    header: '',
+    cell: ({ row }) => <ActionsCell row={row} tableName={tableName} />,
+    size: 60,
+    enableSorting: false,
+    enableHiding: false,
+    enableResizing: false,
+  });
+
+  return columns;
+}
+
 export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -270,10 +372,11 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
     );
   }, [data, searchQuery]);
 
-  const columns = useMemo(() => 
-    generateColumnsFromData(data, tableName), 
-    [data, tableName]
-  );
+  const columns = useMemo(() => {
+    const metaColumns = generateColumnsFromMeta(tableName);
+    if (metaColumns.length > 0) return metaColumns;
+    return generateColumnsFromData(data, tableName);
+  }, [data, tableName]);
 
   const [columnOrder, setColumnOrder] = useState<string[]>(
     columns.map((column) => column.id as string)
