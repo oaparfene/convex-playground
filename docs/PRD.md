@@ -1,0 +1,22 @@
+## PRD: Schema-Agnostic Dynamic Data Grid
+
+- **Goal**: A fullstack, type-safe, schema-agnostic, excel-like data grid with Shadcn UI, TanStack Table, Convex backend, and Zod v3 validation, distributable via a Shadcn-like registry pattern.
+- **Key principles**:
+  - **Schema agnostic UI**: No concrete table references in UI components. UI consumes only abstract meta-schemas.
+  - **Fullstack type safety**: Zod v3 schemas validate on client and server; Convex validators derive from Zod via convex-helpers.
+  - **Runtime extensibility**: Allow new table schemas to be added with registry-only changes; UI adapts automatically.
+  - **Rich grid features**: Per-type filtering, sorting, grouping, search, inline editing, pagination.
+  - **Dynamic forms**: Auto-generated Add/Edit forms; inline cell editors reuse same field renderer and Zod validators.
+- **Non-goals (initial)**:
+  - Advanced access control, audit logging, CSV import/export, massive-scale pushdown for all operations.
+- **Success criteria**:
+  - Adding a new table (schema + zod) requires only registry updates; UI works with filters/sorts/forms.
+  - All CRUD paths zod-validate preflight on client and revalidate on server using convex-helpers.
+  - No UI import of concrete `callsigns`/`sensors` code; only imports from `lib/registry` abstractions.
+- **Constraints**:
+  - Zod v3 (v4 incompatible with convex-helpers).
+  - Convex schema and validator alignment via `zodOutputToConvex` where applicable.
+- **Primary user flows**:
+  - Browse a table → search/filter/sort/group → select rows → inline edit cells or open form → save with validation.
+  - Add new entry via dynamic form → validated → insert via convex mutation.
+  - Registry update adds a new table → grid renders with inferred columns, filters, editors.
