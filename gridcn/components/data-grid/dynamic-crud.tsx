@@ -43,6 +43,9 @@ import { toast } from 'sonner';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Registry } from '@/lib/registry';
+import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface DynamicDataGridProps {
   tableName: string;
@@ -331,8 +334,30 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
       header: ({ column }) => (
         <DataGridColumnHeader title={field.render?.label || formatFieldName(key)} visibility={true} column={column} />
       ),
-      cell: ({ row }) => renderCellFromMeta(key, row.original[key], tableName),
-      size: 150,
+      cell: ({ row, table }) => {
+        const value = row.original[key];
+        const [editing, setEditing] = useState(false);
+        const [local, setLocal] = useState(value);
+        const update = (table.options.meta as any)?.updateRow;
+
+        if (!field.behaviors?.editable || key === '_id') {
+          return renderCellFromMeta(key, value, tableName);
+        }
+        return (
+          <div onDoubleClick={() => setEditing(true)}>
+            {editing ? (
+              <div className="flex items-center gap-2">
+                <FieldRenderer field={field} value={local} onChange={setLocal} />
+                <Button size="sm" onClick={() => { setEditing(false); update?.(row.original._id, { [key]: local }); }}>Save</Button>
+                <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setLocal(value); }}>Cancel</Button>
+              </div>
+            ) : (
+              renderCellFromMeta(key, value, tableName)
+            )}
+          </div>
+        );
+      },
+      size: 220,
       enableSorting: true,
       enableHiding: true,
       enableResizing: true,
@@ -353,6 +378,9 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
 }
 
 export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
+  const mutateUpdate = useMutation(api.registry.update);
+  const mutateInsert = useMutation(api.registry.insert);
+  const mutateDelete = useMutation(api.registry.remove);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -403,6 +431,32 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
       pagination,
       sorting,
       columnOrder,
+    },
+    meta: {
+      updateRow: async (id: string, patch: Record<string, any>) => {
+        try {
+          await mutateUpdate({ table: tableName, id: id as any, patch });
+          toast.success('Row updated');
+        } catch (e: any) {
+          toast.error(e?.message || 'Update failed');
+        }
+      },
+      insertRow: async (value: Record<string, any>) => {
+        try {
+          await mutateInsert({ table: tableName, value });
+          toast.success('Row inserted');
+        } catch (e: any) {
+          toast.error(e?.message || 'Insert failed');
+        }
+      },
+      deleteRow: async (id: string) => {
+        try {
+          await mutateDelete({ table: tableName, id: id as any });
+          toast.success('Row deleted');
+        } catch (e: any) {
+          toast.error(e?.message || 'Delete failed');
+        }
+      },
     },
     columnResizeMode: 'onChange',
     onColumnOrderChange: setColumnOrder,
