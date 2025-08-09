@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +47,7 @@ import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { DynamicFormDialog } from '@/components/forms/DynamicFormDialog';
+import { PopoverForm, PopoverFormButton } from '@/components/ui/popover-form';
 
 interface DynamicDataGridProps {
   tableName: string;
@@ -295,25 +296,86 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
       ),
       cell: ({ row, table }) => {
         const value = row.original[key];
-        const [editing, setEditing] = useState(false);
-        const [local, setLocal] = useState(value);
+        const [popoverOpen, setPopoverOpen] = useState(false);
+        const [localValue, setLocalValue] = useState(value);
+        const [submitting, setSubmitting] = useState(false);
+        const [showSuccess, setShowSuccess] = useState(false);
         const update = (table.options.meta as any)?.updateRow;
 
         if (!field.behaviors?.editable || key === '_id') {
           return <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />;
         }
+
+        const handleSubmit = async (e: React.FormEvent) => {
+          e.preventDefault();
+          setSubmitting(true);
+          try {
+            await update?.(row.original._id, { [key]: localValue });
+            setShowSuccess(true);
+            setTimeout(() => {
+              setPopoverOpen(false);
+              setShowSuccess(false);
+            }, 1000);
+          } catch (error) {
+            console.error('Update failed:', error);
+          } finally {
+            setSubmitting(false);
+          }
+        };
+
+        const handleOpenChange = (open: boolean) => {
+          setPopoverOpen(open);
+          if (open) {
+            setLocalValue(value);
+            setShowSuccess(false);
+          }
+        };
+
+        const triggerRef = useRef<HTMLDivElement>(null);
+
         return (
-          <div onDoubleClick={() => setEditing(true)}>
-            {editing ? (
-              <div className="flex items-center gap-2">
-                <FieldRenderer field={field} value={local} onChange={setLocal} isForm={false} isEditing={true} autoFocus={true} />
-                <Button size="sm" onClick={() => { setEditing(false); update?.(row.original._id, { [key]: local }); }}>Save</Button>
-                <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setLocal(value); }}>Cancel</Button>
-              </div>
-            ) : (
+          <PopoverForm
+            open={popoverOpen}
+            setOpen={handleOpenChange}
+            showSuccess={showSuccess}
+            title={`Edit ${field.render?.label || key}`}
+            width="320px"
+            height="auto"
+            triggerRef={triggerRef}
+            openChild={
+              <form onSubmit={handleSubmit} className="p-4 space-y-3">
+                <div className="mt-6">
+                  <FieldRenderer
+                    field={field}
+                    value={localValue}
+                    onChange={setLocalValue}
+                    isForm={true}
+                    isEditing={true}
+                    autoFocus={true}
+                  />
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPopoverOpen(false)}
+                    className="px-3 py-1 text-sm text-muted-foreground hover:text-foreground"
+                    disabled={submitting}
+                  >
+                    Cancel
+                  </button>
+                  <PopoverFormButton loading={submitting} text="Save" />
+                </div>
+              </form>
+            }
+          >
+            <div
+              ref={triggerRef}
+              className="w-full cursor-pointer rounded px-2 py-1 hover:bg-muted/50 min-h-[32px] flex items-center"
+              onClick={() => setPopoverOpen(true)}
+            >
               <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
-            )}
-          </div>
+            </div>
+          </PopoverForm>
         );
       },
       size: 220,
