@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { buildTableMeta } from "../adapters/zod";
-import { datetimeStringZ } from "../sharedSchemas";
+import { datetimeStringZ, convexIdZ } from "../sharedSchemas";
 
 export const scheduledFlightsZ = z.object({
-  callsign: z.string().uuid().describe("Relation to callsigns id"),
-  aircraft: z.string().uuid().describe("Relation to aircrafts id"),
+  callsign: convexIdZ.describe("Relation to callsigns id"),
+  aircraft: convexIdZ.describe("Relation to aircrafts id"),
   start_time: datetimeStringZ.describe("Start time"),
   end_time: datetimeStringZ.describe("End time"),
 });

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { buildTableMeta } from "../adapters/zod";
-import { hexColorZ, dateStringZ, datetimeStringZ } from "../sharedSchemas";
+import { hexColorZ, dateStringZ, datetimeStringZ, convexIdZ } from "../sharedSchemas";
 
 export const rendererSamplesZ = z.object({
   text: z.string().describe("Sample text"),
@@ -10,8 +10,8 @@ export const rendererSamplesZ = z.object({
   date: dateStringZ.describe("Sample date"),
   datetime: datetimeStringZ.describe("Sample datetime"),
   select: z.enum(["optA", "optB", "optC"]).describe("Sample select"),
-  id_select: z.string().uuid().optional().describe("Sample aircraft reference"),
-  id_multi_select: z.array(z.string().uuid()).describe("Sample sensors references"),
+  id_select: convexIdZ.optional().describe("Sample aircraft reference"),
+  id_multi_select: z.array(convexIdZ).describe("Sample sensors references"),
   json: z.any().describe("Sample JSON"),
   color: hexColorZ.describe("Sample color"),
   obj: z.object({ nested: z.string() }).describe("Sample object"),

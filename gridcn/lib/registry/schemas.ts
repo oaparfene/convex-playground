@@ -4,7 +4,7 @@ import { sensorsZ } from "./tables/sensors";
 import { aircraftsZ } from "./tables/aircrafts";
 import { scheduledFlightsZ } from "./tables/scheduledFlights";
 import { rendererSamplesZ } from "./tables/rendererSamples";
-export { hexColorZ, dateStringZ, datetimeStringZ } from "./sharedSchemas";
+export { hexColorZ, dateStringZ, datetimeStringZ, convexIdZ } from "./sharedSchemas";
 
 export const tableSchemas = {
   callsigns: callsignsZ,

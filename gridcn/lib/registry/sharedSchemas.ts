@@ -18,4 +18,10 @@ export const datetimeStringZ = z
     message: "Invalid datetime format",
   });
 
+export const convexIdZ = z
+  .string({ required_error: "ID is required", invalid_type_error: "ID must be a string" })
+  .regex(/^[a-z0-9]{32}$/, {
+    message: "Invalid Convex ID format",
+  });
+
 
