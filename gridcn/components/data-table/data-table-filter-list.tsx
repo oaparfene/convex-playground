@@ -102,9 +102,13 @@ export function DataTableFilterList<TData>({
       .filter((column) => column.columnDef.enableColumnFilter);
   }, [table]);
 
+  const columnIds = React.useMemo(() => {
+    return columns.map((field) => field.id).filter(Boolean);
+  }, [columns]);
+
   const [filters, setFilters] = useQueryState(
     FILTERS_KEY,
-    getFiltersStateParser<TData>(columns.map((field) => field.id))
+    getFiltersStateParser<TData>(columnIds.length > 0 ? columnIds : ['_fallback'])
       .withDefault([])
       .withOptions({
         clearOnDefault: true,
@@ -125,10 +129,11 @@ export function DataTableFilterList<TData>({
   const onFilterAdd = React.useCallback(() => {
     const column = columns[0];
     console.log("columns", columns);
-    if (!column) return;
+    if (!column || columns.length === 0) return;
 
+    const currentFilters = filters || [];
     debouncedSetFilters([
-      ...filters,
+      ...currentFilters,
       {
         id: column.id as Extract<keyof TData, string>,
         value: "",
@@ -147,7 +152,8 @@ export function DataTableFilterList<TData>({
       updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
     ) => {
       debouncedSetFilters((prevFilters) => {
-        const updatedFilters = prevFilters.map((filter) => {
+        const currentFilters = prevFilters || [];
+        const updatedFilters = currentFilters.map((filter) => {
           if (filter.filterId === filterId) {
             return { ...filter, ...updates } as ExtendedColumnFilter<TData>;
           }
@@ -161,7 +167,8 @@ export function DataTableFilterList<TData>({
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      const updatedFilters = filters.filter(
+      const currentFilters = filters || [];
+      const updatedFilters = currentFilters.filter(
         (filter) => filter.filterId !== filterId,
       );
       void setFilters(updatedFilters);
@@ -199,10 +206,11 @@ export function DataTableFilterList<TData>({
       if (
         event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
         event.shiftKey &&
-        filters.length > 0
+        (filters || []).length > 0
       ) {
         event.preventDefault();
-        onFilterRemove(filters[filters.length - 1]?.filterId ?? "");
+        const currentFilters = filters || [];
+        onFilterRemove(currentFilters[currentFilters.length - 1]?.filterId ?? "");
       }
     }
 
@@ -212,20 +220,31 @@ export function DataTableFilterList<TData>({
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      const currentFilters = filters || [];
       if (
         REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) &&
-        filters.length > 0
+        currentFilters.length > 0
       ) {
         event.preventDefault();
-        onFilterRemove(filters[filters.length - 1]?.filterId ?? "");
+        onFilterRemove(currentFilters[currentFilters.length - 1]?.filterId ?? "");
       }
     },
     [filters, onFilterRemove],
   );
 
+  // Don't render if no columns are available yet
+  if (columns.length === 0) {
+    return (
+      <Button variant="outline" size="sm" disabled>
+        <ListFilter />
+        Filter
+      </Button>
+    );
+  }
+
   return (
     <Sortable
-      value={filters}
+      value={filters || []}
       onValueChange={setFilters}
       getItemValue={(item) => item.filterId}
     >
@@ -234,12 +253,12 @@ export function DataTableFilterList<TData>({
           <Button variant="outline" size="sm" onKeyDown={onTriggerKeyDown}>
             <ListFilter />
             Filter
-            {filters.length > 0 && (
+            {(filters || []).length > 0 && (
               <Badge
                 variant="secondary"
                 className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono font-normal text-[10.4px]"
               >
-                {filters.length}
+                {(filters || []).length}
               </Badge>
             )}
           </Button>
@@ -252,24 +271,24 @@ export function DataTableFilterList<TData>({
         >
           <div className="flex flex-col gap-1">
             <h4 id={labelId} className="font-medium leading-none">
-              {filters.length > 0 ? "Filters" : "No filters applied"}
+              {(filters || []).length > 0 ? "Filters" : "No filters applied"}
             </h4>
             <p
               id={descriptionId}
               className={cn(
                 "text-muted-foreground text-sm",
-                filters.length > 0 && "sr-only",
+                (filters || []).length > 0 && "sr-only",
               )}
             >
-              {filters.length > 0
+              {(filters || []).length > 0
                 ? "Modify filters to refine your rows."
                 : "Add filters to refine your rows."}
             </p>
           </div>
-          {filters.length > 0 ? (
+          {(filters || []).length > 0 ? (
             <SortableContent asChild>
               <ul className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1">
-                {filters.map((filter, index) => (
+                {(filters || []).map((filter, index) => (
                   <DataTableFilterItem<TData>
                     key={filter.filterId}
                     filter={filter}
@@ -294,7 +313,7 @@ export function DataTableFilterList<TData>({
             >
               Add filter
             </Button>
-            {filters.length > 0 ? (
+            {(filters || []).length > 0 ? (
               <Button
                 variant="outline"
                 size="sm"
@@ -665,73 +684,103 @@ function onFilterInputRender<TData>({
     case "select":
     case "multiSelect": {
       const inputListboxId = `${inputId}-listbox`;
-
-      const multiple = filter.variant === "multiSelect";
-      const selectedValues = multiple
-        ? Array.isArray(filter.value)
-          ? filter.value
-          : []
-        : typeof filter.value === "string"
-          ? filter.value
-          : undefined;
-
-      return (
-        <Faceted
-          open={showValueSelector}
-          onOpenChange={setShowValueSelector}
-          value={selectedValues}
-          onValueChange={(value) => {
-            onFilterUpdate(filter.filterId, {
-              value,
-            });
-          }}
-          multiple={multiple}
-        >
-          <FacetedTrigger asChild>
-            <Button
+      
+      if (filter.variant === "select") {
+        // Single select
+        return (
+          <Select
+            open={showValueSelector}
+            onOpenChange={setShowValueSelector}
+            value={typeof filter.value === "string" ? filter.value : ""}
+            onValueChange={(value) =>
+              onFilterUpdate(filter.filterId, {
+                value,
+              })
+            }
+          >
+            <SelectTrigger
               id={inputId}
               aria-controls={inputListboxId}
-              aria-label={`${columnMeta?.label} filter value${multiple ? "s" : ""}`}
-              variant="outline"
-              size="sm"
-              className="w-full rounded font-normal"
+              className="h-8 w-full rounded [&[data-size]]:h-8"
             >
-              <FacetedBadgeList
-                options={columnMeta?.options}
-                placeholder={
-                  columnMeta?.placeholder ??
-                  `Select option${multiple ? "s" : ""}...`
-                }
-              />
-            </Button>
-          </FacetedTrigger>
-          <FacetedContent
-            id={inputListboxId}
-            className="w-[200px] origin-[var(--radix-popover-content-transform-origin)]"
-          >
-            <FacetedInput
-              aria-label={`Search ${columnMeta?.label} options`}
-              placeholder={columnMeta?.placeholder ?? "Search options..."}
-            />
-            <FacetedList>
-              <FacetedEmpty>No options found.</FacetedEmpty>
-              <FacetedGroup>
-                {columnMeta?.options?.map((option) => (
-                  <FacetedItem key={option.value} value={option.value}>
-                    {option.icon && <option.icon />}
+              <SelectValue placeholder={columnMeta?.placeholder ?? "Select option..."} />
+            </SelectTrigger>
+            <SelectContent id={inputListboxId}>
+              {columnMeta?.options?.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  <div className="flex items-center gap-2">
+                    {option.icon && <option.icon className="h-4 w-4" />}
                     <span>{option.label}</span>
                     {option.count && (
-                      <span className="ml-auto font-mono text-xs">
+                      <span className="ml-auto font-mono text-xs opacity-60">
                         {option.count}
                       </span>
                     )}
-                  </FacetedItem>
-                ))}
-              </FacetedGroup>
-            </FacetedList>
-          </FacetedContent>
-        </Faceted>
-      );
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      } else {
+        // Multi-select - for now, fall back to the original Faceted component
+        const selectedValues = Array.isArray(filter.value) ? filter.value : [];
+
+        return (
+          <Faceted
+            open={showValueSelector}
+            onOpenChange={setShowValueSelector}
+            value={selectedValues}
+            onValueChange={(value) => {
+              onFilterUpdate(filter.filterId, {
+                value,
+              });
+            }}
+            multiple={true}
+          >
+            <FacetedTrigger asChild>
+              <Button
+                id={inputId}
+                aria-controls={inputListboxId}
+                aria-label={`${columnMeta?.label} filter values`}
+                variant="outline"
+                size="sm"
+                className="w-full rounded font-normal"
+              >
+                <FacetedBadgeList
+                  options={columnMeta?.options}
+                  placeholder={columnMeta?.placeholder ?? "Select options..."}
+                />
+              </Button>
+            </FacetedTrigger>
+            <FacetedContent
+              id={inputListboxId}
+              className="w-[200px] origin-[var(--radix-popover-content-transform-origin)]"
+            >
+              <FacetedInput
+                aria-label={`Search ${columnMeta?.label} options`}
+                placeholder={columnMeta?.placeholder ?? "Search options..."}
+              />
+              <FacetedList>
+                <FacetedEmpty>No options found.</FacetedEmpty>
+                <FacetedGroup>
+                  {columnMeta?.options?.map((option) => (
+                    <FacetedItem key={option.value} value={option.value}>
+                      {option.icon && <option.icon />}
+                      <span>{option.label}</span>
+                      {option.count && (
+                        <span className="ml-auto font-mono text-xs">
+                          {option.count}
+                        </span>
+                      )}
+                    </FacetedItem>
+                  ))}
+                </FacetedGroup>
+              </FacetedList>
+            </FacetedContent>
+          </Faceted>
+        );
+      }
     }
 
     case "date":

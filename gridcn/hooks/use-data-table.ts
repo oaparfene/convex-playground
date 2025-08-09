@@ -21,6 +21,7 @@ export interface UseDataTableProps {
   handleOpenEdit: (value: Record<string, any>) => void;
   handleDeleteRow: (id: string) => void;
   handleDuplicateRow: (value: Record<string, any>) => void;
+  relatedDataLookup?: Record<string, Record<string, any>[]>;
 }
 
 export function useDataTable({
@@ -31,6 +32,7 @@ export function useDataTable({
   handleOpenEdit,
   handleDeleteRow,
   handleDuplicateRow,
+  relatedDataLookup,
 }: UseDataTableProps) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -39,10 +41,10 @@ export function useDataTable({
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns = useMemo(() => {
-    const metaColumns = generateColumnsFromMeta(tableName);
+    const metaColumns = generateColumnsFromMeta(tableName, relatedDataLookup, data);
     if (metaColumns.length > 0) return metaColumns;
     return [];
-  }, [tableName, handleOpenEdit, handleDeleteRow, handleDuplicateRow]);
+  }, [tableName, relatedDataLookup, data, handleOpenEdit, handleDeleteRow, handleDuplicateRow]);
 
   const [columnOrder, setColumnOrder] = useState<string[]>(
     columns.map((column) => column.id as string)

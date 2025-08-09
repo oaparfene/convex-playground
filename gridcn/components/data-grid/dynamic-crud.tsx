@@ -18,6 +18,7 @@ import { DataTableAdvancedToolbar } from '@/components/data-table/data-table-adv
 import { DataTableFilterList } from '@/components/data-table/data-table-filter-list';
 import { DataTableSortList } from '@/components/data-table/data-table-sort-list';
 import { useDataTable } from '@/hooks/use-data-table';
+import { useTableFilters } from '@/hooks/use-table-filters';
 
 interface DynamicDataGridProps {
   tableName: string;
@@ -67,11 +68,21 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
     return lookup;
   }, [aircraftsData, sensorsData, callsignsData]);
 
+  // Get column IDs for filtering
+  const columnIds = useMemo(() => {
+    if (!tableMeta) return [];
+    return Object.keys(tableMeta.fields).filter(key => key !== '_id');
+  }, [tableMeta]);
+
+  // Apply URL-based filters
+  const { filteredData: urlFilteredData } = useTableFilters(columnIds, data, relatedDataLookup);
+
+  // Apply search query on top of URL filters
   const filteredData = useMemo(() => {
-    if (!searchQuery) return data;
+    if (!searchQuery) return urlFilteredData;
     
     const searchLower = searchQuery.toLowerCase();
-    return data.filter((item) => {
+    return urlFilteredData.filter((item) => {
       // Build searchable content including original values
       const searchableContent: string[] = [];
       
@@ -120,7 +131,7 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
         .toLowerCase()
         .includes(searchLower);
     });
-  }, [data, searchQuery, tableMeta, relatedDataLookup]);
+  }, [urlFilteredData, searchQuery, tableMeta, relatedDataLookup]);
 
   // Define the edit and delete handlers
   const handleOpenEdit = (value: Record<string, any>) => {
@@ -151,6 +162,7 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
     handleOpenEdit,
     handleDeleteRow,
     handleDuplicateRow,
+    relatedDataLookup,
   });
 
   return (

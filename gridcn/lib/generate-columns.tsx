@@ -7,6 +7,17 @@ import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
 import { Registry } from '@/lib/registry';
 import { ActionsCell } from '@/components/data-grid/actions-cell';
 import { RowContextMenu } from '@/components/data-grid/row-context-menu';
+import { 
+  Text, 
+  Hash, 
+  Calendar, 
+  Clock, 
+  ToggleLeft, 
+  List, 
+  ChevronDown,
+  Link,
+  type LucideIcon
+} from 'lucide-react';
 
 // Helper function to format field names for display
 function formatFieldName(fieldName: string): string {
@@ -17,8 +28,23 @@ function formatFieldName(fieldName: string): string {
     .join(' ');
 }
 
+// Helper function to get appropriate icon for field types
+function getFieldIcon(field: any, key: string): LucideIcon {
+  if (field.type === 'boolean') return ToggleLeft;
+  if (field.type === 'number' || field.type === 'bigint') return Hash;
+  if (key.toLowerCase().includes('time') || key.toLowerCase().includes('date')) return Calendar;
+  if (field.type === 'array') return List;
+  if (field.type === 'union') return ChevronDown;
+  if (field.relation) return Link;
+  return Text;
+}
+
 // Generate columns from registry meta schema
-export function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, any>>[] {
+export function generateColumnsFromMeta(
+  tableName: string, 
+  relatedDataLookup?: Record<string, Record<string, any>[]>,
+  data?: Record<string, any>[]
+): ColumnDef<Record<string, any>>[] {
   const meta = Registry.describe().tables[tableName];
   if (!meta) return [];
 
@@ -56,23 +82,140 @@ export function generateColumnsFromMeta(tableName: string): ColumnDef<Record<str
   });
 
   for (const [key, field] of fieldEntries) {
-    // Determine filter variant based on field type
-    const getFilterVariant = (field: any) => {
-      if (field.type === 'boolean') return 'boolean';
-      if (field.type === 'number' || field.type === 'bigint') return 'number';
-      if (field.type === 'array' && field.optional) return 'multiSelect';
-      if (field.type === 'union' && field.members?.some((m: any) => m.type === 'literal')) return 'select';
-      return 'text';
+    // Determine filter variant and metadata based on field type
+    const getFilterMetadata = (field: any, key: string) => {
+      const baseLabel = field.render?.label || formatFieldName(key);
+      const icon = getFieldIcon(field, key);
+      
+      // Boolean fields
+      if (field.type === 'boolean') {
+        return {
+          label: baseLabel,
+          variant: 'boolean' as const,
+          placeholder: `Filter by ${baseLabel.toLowerCase()}...`,
+          icon,
+        };
+      }
+      
+      // Number fields
+      if (field.type === 'number' || field.type === 'bigint') {
+        // Check if this should be a range filter based on data spread
+        if (data && data.length > 0) {
+          const values = data
+            .map(row => row[key])
+            .filter(val => typeof val === 'number' && !isNaN(val));
+          
+          if (values.length > 0) {
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            
+            // Use range filter if there's meaningful spread (more than 10 unique values or wide range)
+            const uniqueValues = new Set(values);
+            if (uniqueValues.size > 10 || (max - min) > 10) {
+              return {
+                label: baseLabel,
+                variant: 'range' as const,
+                placeholder: `Filter ${baseLabel.toLowerCase()}...`,
+                range: [min, max] as [number, number],
+                icon,
+              };
+            }
+          }
+        }
+        
+        return {
+          label: baseLabel,
+          variant: 'number' as const,
+          placeholder: `Enter ${baseLabel.toLowerCase()}...`,
+          icon,
+        };
+      }
+      
+      // Date/time fields
+      if (key.toLowerCase().includes('time') || key.toLowerCase().includes('date') || field.type === 'number' && key.includes('Time')) {
+        return {
+          label: baseLabel,
+          variant: 'dateRange' as const,
+          placeholder: `Select ${baseLabel.toLowerCase()}...`,
+          icon,
+        };
+      }
+      
+      // Array fields (multi-select)
+      if (field.type === 'array') {
+        return {
+          label: baseLabel,
+          variant: 'multiSelect' as const,
+          placeholder: `Select ${baseLabel.toLowerCase()}...`,
+          options: [], // Will be populated dynamically if needed
+          icon,
+        };
+      }
+      
+      // Union fields with literals (select)
+      if (field.type === 'union' && field.members?.some((m: any) => m.type === 'literal')) {
+        const literals = field.members.filter((m: any) => m.type === 'literal');
+        
+        // Calculate counts if data is available
+        let options = literals.map((m: any) => {
+          const value = String(m.value);
+          let count = 0;
+          
+          if (data && data.length > 0) {
+            count = data.filter(row => String(row[key]) === value).length;
+          }
+          
+          return {
+            label: value.charAt(0).toUpperCase() + value.slice(1),
+            value,
+            ...(count > 0 && { count }),
+          };
+        });
+        
+        return {
+          label: baseLabel,
+          variant: 'select' as const,
+          placeholder: `Select ${baseLabel.toLowerCase()}...`,
+          options,
+          icon,
+        };
+      }
+      
+      // ID fields that reference other tables (relation fields)
+      if (field.relation) {
+        const relatedData = relatedDataLookup?.[field.relation.table] || [];
+        const displayField = field.relation.displayField;
+        
+        const options = relatedData.map((item: any) => ({
+          label: displayField ? String(item[displayField] || item._id) : String(item._id),
+          value: String(item._id),
+        }));
+        
+        return {
+          label: baseLabel,
+          variant: field.relation.type === 'id_multi_select' ? 'multiSelect' as const : 'select' as const,
+          placeholder: `Select ${baseLabel.toLowerCase()}...`,
+          options,
+          icon,
+        };
+      }
+      
+      // Default to text
+      return {
+        label: baseLabel,
+        variant: 'text' as const,
+        placeholder: `Search ${baseLabel.toLowerCase()}...`,
+        icon,
+      };
     };
+
+    const filterMeta = getFilterMetadata(field, key);
 
     columns.push({
       accessorKey: key,
       id: key,
       enableColumnFilter: key !== '_id', // Enable filtering for all columns except _id
-      meta: {
-        label: field.render?.label || formatFieldName(key),
-        variant: getFilterVariant(field),
-      },
+      meta: filterMeta,
       header: ({ column }) => (
         <DataGridColumnHeader title={field.render?.label || formatFieldName(key)} visibility={true} column={column} />
       ),
