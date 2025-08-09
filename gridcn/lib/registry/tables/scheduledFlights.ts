@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { buildTableMeta } from "../adapters/zod";
+import { datetimeStringZ } from "../sharedSchemas";
 
 export const scheduledFlightsZ = z.object({
   callsign: z.string().uuid().describe("Relation to callsigns id"),
   aircraft: z.string().uuid().describe("Relation to aircrafts id"),
-  start_time: z.coerce.date().describe("Start time"),
-  end_time: z.coerce.date().describe("End time"),
+  start_time: datetimeStringZ.describe("Start time"),
+  end_time: datetimeStringZ.describe("End time"),
 });
 
 export const scheduledFlightsTableMeta = buildTableMeta("scheduledFlights", scheduledFlightsZ, {

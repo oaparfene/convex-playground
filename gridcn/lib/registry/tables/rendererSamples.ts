@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { buildTableMeta } from "../adapters/zod";
-import { hexColorZ } from "../sharedSchemas";
+import { hexColorZ, dateStringZ, datetimeStringZ } from "../sharedSchemas";
 
 export const rendererSamplesZ = z.object({
   text: z.string().describe("Sample text"),
   textarea: z.string().describe("Sample textarea"),
   number: z.number().describe("Sample number"),
   boolean: z.boolean().describe("Sample boolean"),
-  date: z.coerce.date().describe("Sample date"),
-  datetime: z.coerce.date().describe("Sample datetime"),
+  date: dateStringZ.describe("Sample date"),
+  datetime: datetimeStringZ.describe("Sample datetime"),
   select: z.enum(["optA", "optB", "optC"]).describe("Sample select"),
   id_select: z.string().uuid().optional().describe("Sample id select"),
   id_multi_select: z.array(z.string().uuid()).describe("Sample id multi select"),

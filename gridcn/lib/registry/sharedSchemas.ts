@@ -6,4 +6,16 @@ export const hexColorZ = z
     message: "Color must be a valid hex like #abc or #a1b2c3",
   });
 
+export const dateStringZ = z
+  .string({ required_error: "Date is required", invalid_type_error: "Date must be a string" })
+  .refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid date format",
+  });
+
+export const datetimeStringZ = z
+  .string({ required_error: "Datetime is required", invalid_type_error: "Datetime must be a string" })
+  .refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid datetime format",
+  });
+
 

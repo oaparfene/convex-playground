@@ -404,6 +404,7 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
     meta: {
       updateRow: async (id: string, patch: Record<string, any>) => {
         try {
+          console.log("updateRow", id, patch);
           await mutateUpdate({ table: tableName, id: id as any, patch });
           toast.success('Row updated');
         } catch (e: any) {
@@ -523,7 +524,9 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
             return;
           }
           try {
+            console.log("value", value);
             await mutateUpdate({ table: tableName, id: editingRow._id as any, patch: value });
+            console.log("updated");
             setShowEditModal(false);
             setEditingRow(null);
             toast.success('Row updated');
