@@ -21,7 +21,7 @@ const headerCellSpacingVariants = cva('', {
 const bodyCellSpacingVariants = cva('', {
   variants: {
     size: {
-      dense: 'p-0 border-[2px] border-muted',
+      dense: 'px-2 border-[2px] border-muted',
       default: 'px-4 py-3',
     },
   },
@@ -390,7 +390,7 @@ function DataGridTableRowSelect<TData>({ row, size }: { row: Row<TData>; size?: 
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Select row"
         size={size ?? 'sm'}
-        className="align-[inherit] ml-2"
+        className="align-[inherit]"
       />
     </>
   );
