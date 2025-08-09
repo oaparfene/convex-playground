@@ -62,7 +62,12 @@ interface DynamicDataGridProps {
 }
 
 // Reusable hook for row actions
-function useRowActions(tableName: string, onEdit?: (value: Record<string, any>) => void, onDelete?: (id: string) => void) {
+function useRowActions(
+  tableName: string, 
+  onEdit?: (value: Record<string, any>) => void, 
+  onDelete?: (id: string) => void,
+  onDuplicate?: (value: Record<string, any>) => void
+) {
   const { copy } = useCopyToClipboard();
   
   const handleCopyId = (row: Record<string, any>) => {
@@ -95,20 +100,28 @@ function useRowActions(tableName: string, onEdit?: (value: Record<string, any>) 
     }
   };
 
+  const handleDuplicate = (row: Record<string, any>) => {
+    // Create a copy without unique fields like _id, _creationTime, etc.
+    const { _id, _creationTime, id, ...duplicateData } = row;
+    onDuplicate?.(duplicateData);
+  };
+
   return {
     handleCopyId,
     handleEdit,
     handleDelete,
+    handleDuplicate,
   };
 }
 
-function ActionsCell({ row, tableName, onEdit, onDelete }: { 
+function ActionsCell({ row, tableName, onEdit, onDelete, onDuplicate }: { 
   row: Row<Record<string, any>>; 
   tableName: string; 
   onEdit?: (value: Record<string, any>) => void;
   onDelete?: (id: string) => void;
+  onDuplicate?: (value: Record<string, any>) => void;
 }) {
-  const { handleCopyId, handleEdit, handleDelete } = useRowActions(tableName, onEdit, onDelete);
+  const { handleCopyId, handleEdit, handleDelete, handleDuplicate } = useRowActions(tableName, onEdit, onDelete, onDuplicate);
 
   return (
     <DropdownMenu>
@@ -119,6 +132,7 @@ function ActionsCell({ row, tableName, onEdit, onDelete }: {
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="end">
         <DropdownMenuItem onClick={() => handleEdit(row.original)}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDuplicate(row.original)}>Duplicate</DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleCopyId(row.original)}>Copy ID</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => handleDelete(row.original)}>
@@ -135,15 +149,17 @@ function RowContextMenu({
   row, 
   tableName, 
   onEdit, 
-  onDelete 
+  onDelete,
+  onDuplicate
 }: { 
   children: React.ReactNode; 
   row: Record<string, any>; 
   tableName: string; 
   onEdit?: (value: Record<string, any>) => void;
   onDelete?: (id: string) => void;
+  onDuplicate?: (value: Record<string, any>) => void;
 }) {
-  const { handleCopyId, handleEdit, handleDelete } = useRowActions(tableName, onEdit, onDelete);
+  const { handleCopyId, handleEdit, handleDelete, handleDuplicate } = useRowActions(tableName, onEdit, onDelete, onDuplicate);
 
   return (
     <ContextMenu>
@@ -153,6 +169,9 @@ function RowContextMenu({
       <ContextMenuContent>
         <ContextMenuItem onClick={() => handleEdit(row)}>
           Edit
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleDuplicate(row)}>
+          Duplicate
         </ContextMenuItem>
         <ContextMenuItem onClick={() => handleCopyId(row)}>
           Copy ID
@@ -261,6 +280,7 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
           tableName={tableName}
           onEdit={(table.options.meta as any)?.openEdit}
           onDelete={(table.options.meta as any)?.deleteRow}
+          onDuplicate={(table.options.meta as any)?.duplicateRow}
         >
           <div className="w-full">
             <DataGridTableRowSelect row={row} />
@@ -304,6 +324,7 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
               tableName={tableName}
               onEdit={(table.options.meta as any)?.openEdit}
               onDelete={(table.options.meta as any)?.deleteRow}
+              onDuplicate={(table.options.meta as any)?.duplicateRow}
             >
               <div className="w-full">
                 <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
@@ -379,6 +400,7 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
               tableName={tableName}
               onEdit={(table.options.meta as any)?.openEdit}
               onDelete={(table.options.meta as any)?.deleteRow}
+              onDuplicate={(table.options.meta as any)?.duplicateRow}
             >
               <div
                 ref={triggerRef}
@@ -406,7 +428,8 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
         row={row} 
         tableName={tableName} 
         onEdit={(table.options.meta as any)?.openEdit}
-        onDelete={(table.options.meta as any)?.deleteRow} 
+        onDelete={(table.options.meta as any)?.deleteRow}
+        onDuplicate={(table.options.meta as any)?.duplicateRow}
       />
     ),
     size: 60,
@@ -430,7 +453,9 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
+  const [duplicatingRow, setDuplicatingRow] = useState<Record<string, any> | null>(null);
 
   // Get table metadata to identify relation fields
   const tableMeta = useMemo(() => {
@@ -534,11 +559,16 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
     }
   };
 
+  const handleDuplicateRow = (value: Record<string, any>) => {
+    setDuplicatingRow(value);
+    setShowDuplicateModal(true);
+  };
+
   const columns = useMemo(() => {
     const metaColumns = generateColumnsFromMeta(tableName);
     if (metaColumns.length > 0) return metaColumns;
     return [];
-  }, [data, tableName, handleOpenEdit, handleDeleteRow]);
+  }, [data, tableName, handleOpenEdit, handleDeleteRow, handleDuplicateRow]);
 
   const [columnOrder, setColumnOrder] = useState<string[]>(
     columns.map((column) => column.id as string)
@@ -590,6 +620,7 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
         }
       },
       deleteRow: handleDeleteRow,
+      duplicateRow: handleDuplicateRow,
       openEdit: handleOpenEdit,
     },
     columnResizeMode: 'onChange',
@@ -692,6 +723,25 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
             toast.success('Row updated');
           } catch (e: any) {
             toast.error(e?.message || 'Update failed');
+          }
+        }}
+      />
+
+      <DynamicFormDialog
+        tableName={tableName}
+        mode="create"
+        title="Duplicate Row"
+        open={showDuplicateModal}
+        onOpenChange={(o) => { setShowDuplicateModal(o); if (!o) setDuplicatingRow(null); }}
+        initialValues={duplicatingRow ?? undefined}
+        onSubmit={async (value) => {
+          try {
+            await mutateInsert({ table: tableName, value });
+            setShowDuplicateModal(false);
+            setDuplicatingRow(null);
+            toast.success('Row duplicated successfully');
+          } catch (e: any) {
+            toast.error(e?.message || 'Duplicate failed');
           }
         }}
       />
