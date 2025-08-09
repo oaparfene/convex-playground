@@ -46,13 +46,14 @@ import { Registry } from '@/lib/registry';
 import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
 import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { DynamicFormDialog } from '@/components/forms/DynamicFormDialog';
 
 interface DynamicDataGridProps {
   tableName: string;
   data: Record<string, any>[];
 }
 
-function ActionsCell({ row, tableName }: { row: Row<Record<string, any>>; tableName: string }) {
+function ActionsCell({ row, tableName, onEdit }: { row: Row<Record<string, any>>; tableName: string; onEdit?: (value: Record<string, any>) => void }) {
   const { copy } = useCopyToClipboard();
   const handleCopyId = () => {
     const id = row.original._id || row.original.id || 'unknown';
@@ -81,7 +82,7 @@ function ActionsCell({ row, tableName }: { row: Row<Record<string, any>>; tableN
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="end">
-        <DropdownMenuItem onClick={() => {}}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEdit?.(row.original)}>Edit</DropdownMenuItem>
         <DropdownMenuItem onClick={handleCopyId}>Copy ID</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => {}}>
@@ -247,7 +248,9 @@ function generateColumnsFromData(data: Record<string, any>[], tableName: string)
   columns.push({
     id: '__rowActions__',
     header: '',
-    cell: ({ row }) => <ActionsCell row={row} tableName={tableName} />,
+      cell: ({ row, table }) => (
+        <ActionsCell row={row} tableName={tableName} onEdit={(table.options.meta as any)?.openEdit} />
+      ),
     size: 60,
     enableSorting: false,
     enableHiding: false,
@@ -323,7 +326,9 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
   columns.push({
     id: '__rowActions__',
     header: '',
-    cell: ({ row }) => <ActionsCell row={row} tableName={tableName} />,
+    cell: ({ row, table }) => (
+      <ActionsCell row={row} tableName={tableName} onEdit={(table.options.meta as any)?.openEdit} />
+    ),
     size: 60,
     enableSorting: false,
     enableHiding: false,
@@ -343,6 +348,9 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
   });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
 
   const filteredData = useMemo(() => {
     if (!searchQuery) return data;
@@ -418,6 +426,10 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
           toast.error(e?.message || 'Delete failed');
         }
       },
+      openEdit: (value: Record<string, any>) => {
+        setEditingRow(value);
+        setShowEditModal(true);
+      },
     },
     columnResizeMode: 'onChange',
     onColumnOrderChange: setColumnOrder,
@@ -467,7 +479,7 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
             </div>
           </CardHeading>
           <CardToolbar>
-            <Button>
+            <Button onClick={() => setShowAddModal(true)}>
               <UserRoundPlus />
               Add new
             </Button>
@@ -483,6 +495,43 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
           <DataGridPagination />
         </CardFooter>
       </Card>
+      <DynamicFormDialog
+        tableName={tableName}
+        mode="create"
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        onSubmit={async (value) => {
+          try {
+            await mutateInsert({ table: tableName, value });
+            setShowAddModal(false);
+            toast.success('Row inserted');
+          } catch (e: any) {
+            toast.error(e?.message || 'Insert failed');
+          }
+        }}
+      />
+
+      <DynamicFormDialog
+        tableName={tableName}
+        mode="edit"
+        open={showEditModal}
+        onOpenChange={(o) => { setShowEditModal(o); if (!o) setEditingRow(null); }}
+        initialValues={editingRow ?? undefined}
+        onSubmit={async (value) => {
+          if (!editingRow?._id) {
+            toast.error('Missing row id');
+            return;
+          }
+          try {
+            await mutateUpdate({ table: tableName, id: editingRow._id as any, patch: value });
+            setShowEditModal(false);
+            setEditingRow(null);
+            toast.success('Row updated');
+          } catch (e: any) {
+            toast.error(e?.message || 'Update failed');
+          }
+        }}
+      />
     </DataGrid>
   );
 }
