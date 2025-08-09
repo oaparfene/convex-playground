@@ -48,16 +48,25 @@ import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { DynamicFormDialog } from '@/components/forms/DynamicFormDialog';
 import { PopoverForm, PopoverFormButton } from '@/components/ui/popover-form';
+import { 
+  ContextMenu, 
+  ContextMenuContent, 
+  ContextMenuItem, 
+  ContextMenuSeparator, 
+  ContextMenuTrigger 
+} from '@/components/ui/context-menu';
 
 interface DynamicDataGridProps {
   tableName: string;
   data: Record<string, any>[];
 }
 
-function ActionsCell({ row, tableName, onEdit }: { row: Row<Record<string, any>>; tableName: string; onEdit?: (value: Record<string, any>) => void }) {
+// Reusable hook for row actions
+function useRowActions(tableName: string, onEdit?: (value: Record<string, any>) => void, onDelete?: (id: string) => void) {
   const { copy } = useCopyToClipboard();
-  const handleCopyId = () => {
-    const id = row.original._id || row.original.id || 'unknown';
+  
+  const handleCopyId = (row: Record<string, any>) => {
+    const id = row._id || row.id || 'unknown';
     copy(id);
     const message = `${tableName} ID successfully copied: ${id}`;
     toast.custom(
@@ -75,6 +84,32 @@ function ActionsCell({ row, tableName, onEdit }: { row: Row<Record<string, any>>
     );
   };
 
+  const handleEdit = (row: Record<string, any>) => {
+    onEdit?.(row);
+  };
+
+  const handleDelete = (row: Record<string, any>) => {
+    const id = row._id || row.id;
+    if (id) {
+      onDelete?.(id);
+    }
+  };
+
+  return {
+    handleCopyId,
+    handleEdit,
+    handleDelete,
+  };
+}
+
+function ActionsCell({ row, tableName, onEdit, onDelete }: { 
+  row: Row<Record<string, any>>; 
+  tableName: string; 
+  onEdit?: (value: Record<string, any>) => void;
+  onDelete?: (id: string) => void;
+}) {
+  const { handleCopyId, handleEdit, handleDelete } = useRowActions(tableName, onEdit, onDelete);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -83,14 +118,51 @@ function ActionsCell({ row, tableName, onEdit }: { row: Row<Record<string, any>>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="bottom" align="end">
-        <DropdownMenuItem onClick={() => onEdit?.(row.original)}>Edit</DropdownMenuItem>
-        <DropdownMenuItem onClick={handleCopyId}>Copy ID</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleEdit(row.original)}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleCopyId(row.original)}>Copy ID</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => {}}>
+        <DropdownMenuItem variant="destructive" onClick={() => handleDelete(row.original)}>
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+// Row context menu component
+function RowContextMenu({ 
+  children, 
+  row, 
+  tableName, 
+  onEdit, 
+  onDelete 
+}: { 
+  children: React.ReactNode; 
+  row: Record<string, any>; 
+  tableName: string; 
+  onEdit?: (value: Record<string, any>) => void;
+  onDelete?: (id: string) => void;
+}) {
+  const { handleCopyId, handleEdit, handleDelete } = useRowActions(tableName, onEdit, onDelete);
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        {children}
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onClick={() => handleEdit(row)}>
+          Edit
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => handleCopyId(row)}>
+          Copy ID
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem variant="destructive" onClick={() => handleDelete(row)}>
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -173,94 +245,6 @@ function renderCellContent(value: any, fieldName: string): React.ReactNode {
   return <span>{stringValue}</span>;
 }
 
-// Render cell content using meta schema field definition
-// Removed: renderCellFromMeta - FieldRenderer now handles display and edit
-
-// Generate columns dynamically based on the data structure
-function generateColumnsFromData(data: Record<string, any>[], tableName: string): ColumnDef<Record<string, any>>[] {
-  if (!data || data.length === 0) {
-    return [];
-  }
-
-  // Get all unique keys from all objects
-  const allKeys = new Set<string>();
-  data.forEach(item => {
-    Object.keys(item).forEach(key => allKeys.add(key));
-  });
-
-  const columns: ColumnDef<Record<string, any>>[] = [
-    // Selection column
-    {
-      accessorKey: '_id',
-      id: '__rowSelection__',
-      header: () => <DataGridTableRowSelectAll />,
-      cell: ({ row }) => <DataGridTableRowSelect row={row} />,
-      enableSorting: false,
-      size: 35,
-      meta: {
-        headerClassName: '',
-        cellClassName: '',
-      },
-      enableResizing: false,
-    },
-  ];
-
-  // Sort keys to put _id first, then alphabetically
-  const sortedKeys = Array.from(allKeys).sort((a, b) => {
-    if (a === '_id') return -1;
-    if (b === '_id') return 1;
-    return a.localeCompare(b);
-  });
-
-  // Create columns for each field
-  sortedKeys.forEach(key => {
-    if (key === '_id') {
-      // ID column with special formatting
-      columns.push({
-        accessorKey: key,
-        id: key,
-        header: ({ column }) => <DataGridColumnHeader title="ID" visibility={true} column={column} />,
-        cell: ({ row }) => {
-          const value = row.original[key];
-          return <span className="font-mono text-xs">{value}</span>;
-        },
-        size: 120,
-        enableSorting: true,
-        enableHiding: true,
-        enableResizing: true,
-      });
-    } else {
-      columns.push({
-        accessorKey: key,
-        id: key,
-        header: ({ column }) => (
-          <DataGridColumnHeader title={formatFieldName(key)} visibility={true} column={column} />
-        ),
-        cell: ({ row }) => renderCellContent(row.original[key], key),
-        size: 150,
-        enableSorting: true,
-        enableHiding: true,
-        enableResizing: true,
-      });
-    }
-  });
-
-  // Actions column
-  columns.push({
-    id: '__rowActions__',
-    header: '',
-      cell: ({ row, table }) => (
-        <ActionsCell row={row} tableName={tableName} onEdit={(table.options.meta as any)?.openEdit} />
-      ),
-    size: 60,
-    enableSorting: false,
-    enableHiding: false,
-    enableResizing: false,
-  });
-
-  return columns;
-}
-
 // Generate columns from registry meta schema
 function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, any>>[] {
   const meta = Registry.describe().tables[tableName];
@@ -271,7 +255,18 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
       accessorKey: '_id',
       id: '__rowSelection__',
       header: () => <DataGridTableRowSelectAll />,
-      cell: ({ row }) => <DataGridTableRowSelect row={row} />,
+      cell: ({ row, table }) => (
+        <RowContextMenu
+          row={row.original}
+          tableName={tableName}
+          onEdit={(table.options.meta as any)?.openEdit}
+          onDelete={(table.options.meta as any)?.deleteRow}
+        >
+          <div className="w-full">
+            <DataGridTableRowSelect row={row} />
+          </div>
+        </RowContextMenu>
+      ),
       enableSorting: false,
       size: 35,
       meta: { headerClassName: '', cellClassName: '' },
@@ -303,7 +298,18 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
         const update = (table.options.meta as any)?.updateRow;
 
         if (!field.behaviors?.editable || key === '_id') {
-          return <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />;
+          return (
+            <RowContextMenu
+              row={row.original}
+              tableName={tableName}
+              onEdit={(table.options.meta as any)?.openEdit}
+              onDelete={(table.options.meta as any)?.deleteRow}
+            >
+              <div className="w-full">
+                <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
+              </div>
+            </RowContextMenu>
+          );
         }
 
         const handleSubmit = async (e: React.FormEvent) => {
@@ -368,13 +374,20 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
               </form>
             }
           >
-            <div
-              ref={triggerRef}
-              className="w-full cursor-pointer rounded px-2 py-1 hover:bg-muted/50 min-h-[32px] flex items-center"
-              onClick={() => setPopoverOpen(true)}
+            <RowContextMenu
+              row={row.original}
+              tableName={tableName}
+              onEdit={(table.options.meta as any)?.openEdit}
+              onDelete={(table.options.meta as any)?.deleteRow}
             >
-              <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
-            </div>
+              <div
+                ref={triggerRef}
+                className="w-full cursor-pointer rounded px-2 py-1 hover:bg-muted/50 min-h-[32px] flex items-center"
+                onClick={() => setPopoverOpen(true)}
+              >
+                <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
+              </div>
+            </RowContextMenu>
           </PopoverForm>
         );
       },
@@ -389,7 +402,12 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
     id: '__rowActions__',
     header: '',
     cell: ({ row, table }) => (
-      <ActionsCell row={row} tableName={tableName} onEdit={(table.options.meta as any)?.openEdit} />
+      <ActionsCell 
+        row={row} 
+        tableName={tableName} 
+        onEdit={(table.options.meta as any)?.openEdit}
+        onDelete={(table.options.meta as any)?.deleteRow} 
+      />
     ),
     size: 60,
     enableSorting: false,
@@ -501,11 +519,26 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
     });
   }, [data, searchQuery, tableMeta, relatedDataLookup]);
 
+  // Define the edit and delete handlers
+  const handleOpenEdit = (value: Record<string, any>) => {
+    setEditingRow(value);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteRow = async (id: string) => {
+    try {
+      await mutateDelete({ table: tableName, id: id as any });
+      toast.success('Row deleted');
+    } catch (e: any) {
+      toast.error(e?.message || 'Delete failed');
+    }
+  };
+
   const columns = useMemo(() => {
     const metaColumns = generateColumnsFromMeta(tableName);
     if (metaColumns.length > 0) return metaColumns;
-    return generateColumnsFromData(data, tableName);
-  }, [data, tableName]);
+    return [];
+  }, [data, tableName, handleOpenEdit, handleDeleteRow]);
 
   const [columnOrder, setColumnOrder] = useState<string[]>(
     columns.map((column) => column.id as string)
@@ -556,18 +589,8 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
           toast.error(e?.message || 'Insert failed');
         }
       },
-      deleteRow: async (id: string) => {
-        try {
-          await mutateDelete({ table: tableName, id: id as any });
-          toast.success('Row deleted');
-        } catch (e: any) {
-          toast.error(e?.message || 'Delete failed');
-        }
-      },
-      openEdit: (value: Record<string, any>) => {
-        setEditingRow(value);
-        setShowEditModal(true);
-      },
+      deleteRow: handleDeleteRow,
+      openEdit: handleOpenEdit,
     },
     columnResizeMode: 'onChange',
     onColumnOrderChange: setColumnOrder,
