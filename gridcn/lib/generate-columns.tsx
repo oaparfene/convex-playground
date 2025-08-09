@@ -88,7 +88,7 @@ export function generateColumnsFromMeta(
       const icon = getFieldIcon(field, key);
       
       // Boolean fields
-      if (field.type === 'boolean') {
+      if (field.type.type === 'boolean') {
         return {
           label: baseLabel,
           variant: 'boolean' as const,
@@ -98,7 +98,7 @@ export function generateColumnsFromMeta(
       }
       
       // Number fields
-      if (field.type === 'number' || field.type === 'bigint') {
+      if (field.type.type === 'number' || field.type.type === 'bigint') {
         // Check if this should be a range filter based on data spread
         if (data && data.length > 0) {
           const values = data
@@ -142,7 +142,7 @@ export function generateColumnsFromMeta(
       }
       
       // Array fields (multi-select)
-      if (field.type === 'array') {
+      if (field.type.type === 'array') {
         return {
           label: baseLabel,
           variant: 'multiSelect' as const,
@@ -153,12 +153,12 @@ export function generateColumnsFromMeta(
       }
       
       // Union fields with literals (select)
-      if (field.type === 'union' && field.members?.some((m: any) => m.type === 'literal')) {
-        const literals = field.members.filter((m: any) => m.type === 'literal');
+      if (field.type.type === 'enum') {
+        const literals = field.validation.zod._def.values;
         
         // Calculate counts if data is available
         let options = literals.map((m: any) => {
-          const value = String(m.value);
+          const value = String(m);
           let count = 0;
           
           if (data && data.length > 0) {
@@ -210,7 +210,7 @@ export function generateColumnsFromMeta(
     };
 
     const filterMeta = getFilterMetadata(field, key);
-
+    
     columns.push({
       accessorKey: key,
       id: key,

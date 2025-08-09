@@ -131,16 +131,17 @@ export function DataTableFilterList<TData>({
     console.log("columns", columns);
     if (!column || columns.length === 0) return;
 
+    const variant = column.columnDef.meta?.variant ?? "text";
+    console.log(`Adding filter for column ${column.id}, meta:`, column.columnDef.meta, `variant: ${variant}`);
+
     const currentFilters = filters || [];
     debouncedSetFilters([
       ...currentFilters,
       {
         id: column.id as Extract<keyof TData, string>,
         value: "",
-        variant: column.columnDef.meta?.variant ?? "text",
-        operator: getDefaultFilterOperator(
-          column.columnDef.meta?.variant ?? "text",
-        ),
+        variant: variant,
+        operator: getDefaultFilterOperator(variant),
         filterId: generateId({ length: 8 }),
       },
     ]);
