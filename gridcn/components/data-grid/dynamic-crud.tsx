@@ -44,7 +44,7 @@ import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Registry } from '@/lib/registry';
 import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { DynamicFormDialog } from '@/components/forms/DynamicFormDialog';
 import { PopoverForm, PopoverFormButton } from '@/components/ui/popover-form';
@@ -414,17 +414,92 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
 
+  // Get table metadata to identify relation fields
+  const tableMeta = useMemo(() => {
+    return Registry.describe().tables[tableName];
+  }, [tableName]);
+
+  // Get all unique relation tables that we need to fetch
+  const relationTables = useMemo(() => {
+    if (!tableMeta) return [];
+    
+    const tables = new Set<string>();
+    Object.values(tableMeta.fields).forEach(field => {
+      if (field.relation?.table) {
+        tables.add(field.relation.table);
+      }
+    });
+    return Array.from(tables);
+  }, [tableMeta]);
+
+  // Fetch all related table data
+  const aircraftsData = useQuery(api.registry.list, relationTables.includes('aircrafts') ? { table: 'aircrafts' } : 'skip');
+  const sensorsData = useQuery(api.registry.list, relationTables.includes('sensors') ? { table: 'sensors' } : 'skip');
+  const callsignsData = useQuery(api.registry.list, relationTables.includes('callsigns') ? { table: 'callsigns' } : 'skip');
+
+  // Create lookup for all related data
+  const relatedDataLookup = useMemo(() => {
+    const lookup: Record<string, Record<string, any>[]> = {};
+    if (aircraftsData) lookup.aircrafts = aircraftsData;
+    if (sensorsData) lookup.sensors = sensorsData;
+    if (callsignsData) lookup.callsigns = callsignsData;
+    return lookup;
+  }, [aircraftsData, sensorsData, callsignsData]);
+
   const filteredData = useMemo(() => {
     if (!searchQuery) return data;
     
     const searchLower = searchQuery.toLowerCase();
-    return data.filter((item) =>
-      Object.values(item)
+    return data.filter((item) => {
+      // Build searchable content including original values
+      const searchableContent: string[] = [];
+      
+      // Add all original field values
+      Object.entries(item).forEach(([fieldName, value]) => {
+        if (value != null) {
+          if (Array.isArray(value)) {
+            searchableContent.push(...value.map(v => String(v)));
+          } else {
+            searchableContent.push(String(value));
+          }
+        }
+      });
+
+      // Add resolved display values for relation fields
+      if (tableMeta) {
+        Object.entries(tableMeta.fields).forEach(([fieldName, field]) => {
+          if (field.relation && item[fieldName] != null) {
+            const relatedData = relatedDataLookup[field.relation.table];
+            const displayField = field.relation.displayField;
+            
+            if (relatedData && displayField) {
+              if (Array.isArray(item[fieldName])) {
+                // Handle multi-select relation (id_multi_select)
+                item[fieldName].forEach((id: string) => {
+                  const relatedItem = relatedData.find((r: any) => r._id === id);
+                  if (relatedItem && relatedItem[displayField]) {
+                    searchableContent.push(String(relatedItem[displayField]));
+                  }
+                });
+              } else {
+                // Handle single relation (id_select)
+                const relatedItem = relatedData.find((r: any) => r._id === item[fieldName]);
+                if (relatedItem && relatedItem[displayField]) {
+                  searchableContent.push(String(relatedItem[displayField]));
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // Check if search query matches any of the searchable content
+      return searchableContent
         .join(' ')
         .toLowerCase()
-        .includes(searchLower)
-    );
-  }, [data, searchQuery]);
+        .includes(searchLower);
+    });
+  }, [data, searchQuery, tableMeta, relatedDataLookup]);
 
   const columns = useMemo(() => {
     const metaColumns = generateColumnsFromMeta(tableName);
