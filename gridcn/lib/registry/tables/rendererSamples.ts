@@ -29,7 +29,7 @@ export const rendererSamplesTableMeta = buildTableMeta("rendererSamples", render
       render: { component: "id-select" } 
     },
     id_multi_select: { 
-      relation: { kind: "relation", table: "sensors", cardinality: "many", displayField: "name" },
+      relation: { kind: "relation", table: "sensors", cardinality: "many", displayField: "name", colorField: "color" },
       render: { component: "id-multi-select" } 
     },
     json: { render: { component: "json" } },

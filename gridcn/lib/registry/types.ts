@@ -25,6 +25,7 @@ export type RelationMeta = {
   table: string;
   cardinality: "one" | "many";
   displayField?: string;
+  colorField?: string;
 };
 
 export type EnumMeta = {

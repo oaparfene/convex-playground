@@ -57,7 +57,7 @@ export const seedSensors = mutation({
         max_range: maxRange,
         resolution: faker.helpers.arrayElement([1920, 2048, 4096, 8192, 1080]),
         circular_error_probable: faker.number.float({ min: 0.5, max: 5.0, fractionDigits: 1 }),
-        min_detectable_velocity: `${faker.number.int({ min: 1, max: 10 })} m/s`,
+        min_detectable_velocity: faker.number.int({ min: 1, max: 10 }),
       });
     }
 
@@ -208,8 +208,7 @@ const _seedSensors = async (ctx: any) => {
     return "Sensors already seeded";
   }
 
-  const sensorTypes = ["Thermal", "Optical", "Multi-Spectral", "Radar", "LiDAR", "Infrared"];
-  const colorTypes = ["RGB", "Infrared", "Multi", "Monochrome", "False Color"];
+  const sensorTypes = ["FMV", "EO", "SAR", "GMTI", "IR", "MPA"];
   
   const sensors = [];
 
@@ -218,14 +217,14 @@ const _seedSensors = async (ctx: any) => {
     const maxRange = minRange + faker.number.int({ min: 2000, max: 15000 });
     
     sensors.push({
-      name: `${faker.helpers.arrayElement(sensorTypes)} ${faker.word.adjective()} ${faker.word.noun()}`,
+      name: `${faker.helpers.arrayElement(sensorTypes)}`,
       type: faker.helpers.arrayElement(sensorTypes),
-      color: faker.helpers.arrayElement(colorTypes),
+      color: faker.color.rgb({ format: 'hex' }),
       min_range: minRange,
       max_range: maxRange,
       resolution: faker.helpers.arrayElement([1920, 2048, 4096, 8192, 1080]),
       circular_error_probable: faker.number.float({ min: 0.5, max: 5.0, fractionDigits: 1 }),
-      min_detectable_velocity: `${faker.number.int({ min: 1, max: 10 })} m/s`,
+      min_detectable_velocity: faker.number.int({ min: 1, max: 10 }),
     });
   }
 

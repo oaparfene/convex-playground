@@ -12,7 +12,7 @@ export default defineSchema({
     max_range: v.number(),
     resolution: v.number(),
     circular_error_probable: v.number(),
-    min_detectable_velocity: v.string(),
+    min_detectable_velocity: v.number(),
   }),
   aircrafts: defineTable({
     name: v.string(),

@@ -27,14 +27,16 @@ export function IdMultiSelectField({ field, label, showLabel, value, onChange, i
   const currentValues = Array.isArray(value) ? value : [];
 
   const displayItems = React.useMemo(() => {
-    if (!relatedData || !field?.relation) return currentValues.map(id => ({ id, display: id }));
+    if (!relatedData || !field?.relation) return currentValues.map(id => ({ id, display: id, color: undefined }));
     
     return currentValues.map(id => {
       const relatedItem = relatedData.find((item: any) => item._id === id);
       const displayField = field.relation!.displayField;
+      const colorField = field.relation!.colorField;
       return {
         id,
-        display: relatedItem && displayField ? relatedItem[displayField] : id
+        display: relatedItem && displayField ? relatedItem[displayField] : id,
+        color: relatedItem && colorField ? relatedItem[colorField] : undefined
       };
     });
   }, [currentValues, relatedData, field?.relation]);
@@ -73,8 +75,24 @@ export function IdMultiSelectField({ field, label, showLabel, value, onChange, i
         </Select>
         {displayItems.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {displayItems.map(({ id, display }) => (
-              <Badge key={id} variant="secondary" className="flex items-center gap-1">
+            {displayItems.map(({ id, display, color }) => (
+              <Badge 
+                size="md"
+                key={id} 
+                variant="secondary" 
+                className="flex items-center gap-1"
+                style={color ? { 
+                  backgroundColor: color + '20', // 20% opacity
+                  borderColor: color,
+                  color: color
+                } : undefined}
+              >
+                {color && (
+                  <div 
+                    className="w-2 h-2 rounded-full mr-1" 
+                    style={{ backgroundColor: color }}
+                  />
+                )}
                 {display}
                 <X 
                   className="h-3 w-3 cursor-pointer hover:text-destructive" 
@@ -101,8 +119,24 @@ export function IdMultiSelectField({ field, label, showLabel, value, onChange, i
   ) : (
     <div className="flex flex-wrap gap-1">
       {displayItems.length > 0 ? (
-        displayItems.map(({ id, display }) => (
-          <Badge key={id} variant="secondary" size="sm">
+        displayItems.map(({ id, display, color }) => (
+          <Badge 
+            key={id} 
+            variant="secondary" 
+            size="sm"
+            className="flex items-center gap-1"
+            style={color ? { 
+              backgroundColor: color + '20', // 20% opacity
+              borderColor: color,
+              color: color
+            } : undefined}
+          >
+            {color && (
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: color }}
+              />
+            )}
             {display}
           </Badge>
         ))

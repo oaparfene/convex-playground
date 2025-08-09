@@ -15,5 +15,8 @@ export const sensorsZ = z.object({
 
 export const sensorsTableMeta = buildTableMeta("sensors", sensorsZ, {
   tableLabel: "Sensors",
+  fieldOverrides: {
+    color: { render: { component: "color" } },
+  },
 });
 
