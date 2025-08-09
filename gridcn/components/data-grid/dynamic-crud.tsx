@@ -1,401 +1,33 @@
 'use client';
 
-import { useMemo, useState, useRef } from 'react';
-import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
-import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardFooter, CardTable } from '@/components/ui/card';
 import { DataGrid } from '@/components/ui/data-grid';
-import { DataGridColumnHeader } from '@/components/ui/data-grid-column-header';
 import { DataGridPagination } from '@/components/ui/data-grid-pagination';
-import {
-  DataGridTableRowSelect,
-  DataGridTableRowSelectAll,
-} from '@/components/ui/data-grid-table';
 import { DataGridTableDnd } from '@/components/ui/data-grid-table-dnd';
-import {
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { DropdownMenu } from '@radix-ui/react-dropdown-menu';
-import { RiCheckboxCircleFill } from '@remixicon/react';
-import {
-  ColumnDef,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  PaginationState,
-  Row,
-  SortingState,
-  useReactTable,
-} from '@tanstack/react-table';
-import { Ellipsis, Filter, Plus, Search, UserRoundPlus, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { DragEndEvent } from '@dnd-kit/core';
-import { arrayMove } from '@dnd-kit/sortable';
 import { Registry } from '@/lib/registry';
-import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { DynamicFormDialog } from '@/components/forms/DynamicFormDialog';
-import { PopoverForm, PopoverFormButton } from '@/components/ui/popover-form';
-import { 
-  ContextMenu, 
-  ContextMenuContent, 
-  ContextMenuItem, 
-  ContextMenuSeparator, 
-  ContextMenuTrigger 
-} from '@/components/ui/context-menu';
 import { DataTableAdvancedToolbar } from '@/components/data-table/data-table-advanced-toolbar';
 import { DataTableFilterList } from '@/components/data-table/data-table-filter-list';
 import { DataTableSortList } from '@/components/data-table/data-table-sort-list';
+import { useDataTable } from '@/hooks/use-data-table';
 
 interface DynamicDataGridProps {
   tableName: string;
   data: Record<string, any>[];
 }
 
-// Reusable hook for row actions
-function useRowActions(
-  tableName: string, 
-  onEdit?: (value: Record<string, any>) => void, 
-  onDelete?: (id: string) => void,
-  onDuplicate?: (value: Record<string, any>) => void
-) {
-  const { copy } = useCopyToClipboard();
-  
-  const handleCopyId = (row: Record<string, any>) => {
-    const id = row._id || row.id || 'unknown';
-    copy(id);
-    const message = `${tableName} ID successfully copied: ${id}`;
-    toast.custom(
-      (t) => (
-        <Alert variant="mono" icon="primary" close={false} onClose={() => toast.dismiss(t)}>
-          <AlertIcon>
-            <RiCheckboxCircleFill />
-          </AlertIcon>
-          <AlertTitle>{message}</AlertTitle>
-        </Alert>
-      ),
-      {
-        position: 'top-center',
-      },
-    );
-  };
-
-  const handleEdit = (row: Record<string, any>) => {
-    onEdit?.(row);
-  };
-
-  const handleDelete = (row: Record<string, any>) => {
-    const id = row._id || row.id;
-    if (id) {
-      onDelete?.(id);
-    }
-  };
-
-  const handleDuplicate = (row: Record<string, any>) => {
-    // Create a copy without unique fields like _id, _creationTime, etc.
-    const { _id, _creationTime, id, ...duplicateData } = row;
-    onDuplicate?.(duplicateData);
-  };
-
-  return {
-    handleCopyId,
-    handleEdit,
-    handleDelete,
-    handleDuplicate,
-  };
-}
-
-function ActionsCell({ row, tableName, onEdit, onDelete, onDuplicate }: { 
-  row: Row<Record<string, any>>; 
-  tableName: string; 
-  onEdit?: (value: Record<string, any>) => void;
-  onDelete?: (id: string) => void;
-  onDuplicate?: (value: Record<string, any>) => void;
-}) {
-  const { handleCopyId, handleEdit, handleDelete, handleDuplicate } = useRowActions(tableName, onEdit, onDelete, onDuplicate);
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button className="size-7" mode="icon" variant="ghost">
-          <Ellipsis />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="end">
-        <DropdownMenuItem onClick={() => handleEdit(row.original)}>Edit</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleDuplicate(row.original)}>Duplicate</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleCopyId(row.original)}>Copy ID</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => handleDelete(row.original)}>
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-// Row context menu component
-function RowContextMenu({ 
-  children, 
-  row, 
-  tableName, 
-  onEdit, 
-  onDelete,
-  onDuplicate
-}: { 
-  children: React.ReactNode; 
-  row: Record<string, any>; 
-  tableName: string; 
-  onEdit?: (value: Record<string, any>) => void;
-  onDelete?: (id: string) => void;
-  onDuplicate?: (value: Record<string, any>) => void;
-}) {
-  const { handleCopyId, handleEdit, handleDelete, handleDuplicate } = useRowActions(tableName, onEdit, onDelete, onDuplicate);
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        {children}
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={() => handleEdit(row)}>
-          Edit
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleDuplicate(row)}>
-          Duplicate
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => handleCopyId(row)}>
-          Copy ID
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem variant="destructive" onClick={() => handleDelete(row)}>
-          Delete
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
-  );
-}
-
-// Helper function to format field names for display
-function formatFieldName(fieldName: string): string {
-  return fieldName
-    .replace(/_/g, ' ')
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
-
-// Generate columns from registry meta schema
-function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, any>>[] {
-  const meta = Registry.describe().tables[tableName];
-  if (!meta) return [];
-
-  const columns: ColumnDef<Record<string, any>>[] = [
-    {
-      accessorKey: '_id',
-      id: '__rowSelection__',
-      header: () => <DataGridTableRowSelectAll />,
-      cell: ({ row, table }) => (
-        <RowContextMenu
-          row={row.original}
-          tableName={tableName}
-          onEdit={(table.options.meta as any)?.openEdit}
-          onDelete={(table.options.meta as any)?.deleteRow}
-          onDuplicate={(table.options.meta as any)?.duplicateRow}
-        >
-          <div className="w-full">
-            <DataGridTableRowSelect row={row} />
-          </div>
-        </RowContextMenu>
-      ),
-      enableSorting: false,
-      size: 35,
-      meta: { headerClassName: '', cellClassName: '' },
-      enableResizing: false,
-    },
-  ];
-
-  // Sort fields: _id first, then others alphabetically
-  const fieldEntries = Object.entries(meta.fields);
-  fieldEntries.sort(([a], [b]) => {
-    if (a === '_id') return -1;
-    if (b === '_id') return 1;
-    return a.localeCompare(b);
-  });
-
-  for (const [key, field] of fieldEntries) {
-    // Determine filter variant based on field type
-    const getFilterVariant = (field: any) => {
-      if (field.type === 'boolean') return 'boolean';
-      if (field.type === 'number' || field.type === 'bigint') return 'number';
-      if (field.type === 'array' && field.optional) return 'multiSelect';
-      if (field.type === 'union' && field.members?.some((m: any) => m.type === 'literal')) return 'select';
-      return 'text';
-    };
-
-    columns.push({
-      accessorKey: key,
-      id: key,
-      enableColumnFilter: key !== '_id', // Enable filtering for all columns except _id
-      meta: {
-        label: field.render?.label || formatFieldName(key),
-        variant: getFilterVariant(field),
-      },
-      header: ({ column }) => (
-        <DataGridColumnHeader title={field.render?.label || formatFieldName(key)} visibility={true} column={column} />
-      ),
-      cell: ({ row, table }) => {
-        const value = row.original[key];
-        const [popoverOpen, setPopoverOpen] = useState(false);
-        const [localValue, setLocalValue] = useState(value);
-        const [submitting, setSubmitting] = useState(false);
-        const [showSuccess, setShowSuccess] = useState(false);
-        const update = (table.options.meta as any)?.updateRow;
-
-        if (!field.behaviors?.editable || key === '_id') {
-          return (
-            <RowContextMenu
-              row={row.original}
-              tableName={tableName}
-              onEdit={(table.options.meta as any)?.openEdit}
-              onDelete={(table.options.meta as any)?.deleteRow}
-              onDuplicate={(table.options.meta as any)?.duplicateRow}
-            >
-              <div className="w-full">
-                <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
-              </div>
-            </RowContextMenu>
-          );
-        }
-
-        const handleSubmit = async (e: React.FormEvent) => {
-          e.preventDefault();
-          setSubmitting(true);
-          try {
-            await update?.(row.original._id, { [key]: localValue });
-            setShowSuccess(true);
-            setTimeout(() => {
-              setPopoverOpen(false);
-              setShowSuccess(false);
-            }, 1000);
-          } catch (error) {
-            console.error('Update failed:', error);
-          } finally {
-            setSubmitting(false);
-          }
-        };
-
-        const handleOpenChange = (open: boolean) => {
-          setPopoverOpen(open);
-          if (open) {
-            setLocalValue(value);
-            setShowSuccess(false);
-          }
-        };
-
-        const triggerRef = useRef<HTMLDivElement>(null);
-
-        return (
-          <PopoverForm
-            open={popoverOpen}
-            setOpen={handleOpenChange}
-            showSuccess={showSuccess}
-            title={`Edit ${field.render?.label || key}`}
-            width="320px"
-            height="auto"
-            triggerRef={triggerRef}
-            openChild={
-              <form onSubmit={handleSubmit} className="p-4 space-y-3">
-                <div className="mt-6">
-                  <FieldRenderer
-                    field={field}
-                    value={localValue}
-                    onChange={setLocalValue}
-                    isForm={true}
-                    isEditing={true}
-                    autoFocus={true}
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setPopoverOpen(false)}
-                    className="px-3 py-1 text-sm text-muted-foreground hover:text-foreground"
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </button>
-                  <PopoverFormButton loading={submitting} text="Save" />
-                </div>
-              </form>
-            }
-          >
-            <RowContextMenu
-              row={row.original}
-              tableName={tableName}
-              onEdit={(table.options.meta as any)?.openEdit}
-              onDelete={(table.options.meta as any)?.deleteRow}
-              onDuplicate={(table.options.meta as any)?.duplicateRow}
-            >
-              <div
-                ref={triggerRef}
-                className="w-full cursor-pointer rounded px-2 py-1 hover:bg-muted/50 min-h-[32px] flex items-center"
-                onClick={() => setPopoverOpen(true)}
-              >
-                <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
-              </div>
-            </RowContextMenu>
-          </PopoverForm>
-        );
-      },
-      size: 220,
-      enableSorting: true,
-      enableHiding: true,
-      enableResizing: true,
-    });
-  }
-
-  columns.push({
-    id: '__rowActions__',
-    header: '',
-    cell: ({ row, table }) => (
-      <ActionsCell 
-        row={row} 
-        tableName={tableName} 
-        onEdit={(table.options.meta as any)?.openEdit}
-        onDelete={(table.options.meta as any)?.deleteRow}
-        onDuplicate={(table.options.meta as any)?.duplicateRow}
-      />
-    ),
-    size: 60,
-    enableSorting: false,
-    enableHiding: false,
-    enableResizing: false,
-    enableColumnFilter: false,
-  });
-
-  return columns;
-}
-
 export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
   const mutateUpdate = useMutation(api.registry.update);
   const mutateInsert = useMutation(api.registry.insert);
   const mutateDelete = useMutation(api.registry.remove);
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  });
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -510,73 +142,15 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
     setShowDuplicateModal(true);
   };
 
-  const columns = useMemo(() => {
-    const metaColumns = generateColumnsFromMeta(tableName);
-    if (metaColumns.length > 0) return metaColumns;
-    return [];
-  }, [data, tableName, handleOpenEdit, handleDeleteRow, handleDuplicateRow]);
-
-  const [columnOrder, setColumnOrder] = useState<string[]>(
-    columns.map((column) => column.id as string)
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (active && over && active.id !== over.id) {
-      // Prevent moving locked columns
-      const locked = ['__rowSelection__', '__rowActions__'];
-      if (locked.includes(String(active.id)) || locked.includes(String(over.id))) {
-        return;
-      }
-      setColumnOrder((currentOrder) => {
-        const oldIndex = currentOrder.indexOf(active.id as string);
-        const newIndex = currentOrder.indexOf(over.id as string);
-        if (oldIndex === -1 || newIndex === -1) return currentOrder;
-        return arrayMove(currentOrder, oldIndex, newIndex);
-      });
-    }
-  };
-
-  const table = useReactTable({
-    columns,
+  // Use the custom data table hook
+  const { table, handleDragEnd } = useDataTable({
+    tableName,
     data: filteredData,
-    pageCount: Math.ceil((filteredData?.length || 0) / pagination.pageSize),
-    getRowId: (row: Record<string, any>) => row._id || row.id || Math.random().toString(),
-    state: {
-      pagination,
-      sorting,
-      columnOrder,
-    },
-    meta: {
-      updateRow: async (id: string, patch: Record<string, any>) => {
-        try {
-          console.log("updateRow", id, patch);
-          await mutateUpdate({ table: tableName, id: id as any, patch });
-          toast.success('Row updated');
-        } catch (e: any) {
-          toast.error(e?.message || 'Update failed');
-        }
-      },
-      insertRow: async (value: Record<string, any>) => {
-        try {
-          await mutateInsert({ table: tableName, value });
-          toast.success('Row inserted');
-        } catch (e: any) {
-          toast.error(e?.message || 'Insert failed');
-        }
-      },
-      deleteRow: handleDeleteRow,
-      duplicateRow: handleDuplicateRow,
-      openEdit: handleOpenEdit,
-    },
-    columnResizeMode: 'onChange',
-    onColumnOrderChange: setColumnOrder,
-    onPaginationChange: setPagination,
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    mutateUpdate,
+    mutateInsert,
+    handleOpenEdit,
+    handleDeleteRow,
+    handleDuplicateRow,
   });
 
   return (
