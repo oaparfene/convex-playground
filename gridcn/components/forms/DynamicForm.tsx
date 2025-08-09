@@ -7,16 +7,29 @@ import { Registry } from '@/lib/registry';
 import type { FieldMeta } from '@/lib/registry/types';
 import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
 import { Button } from '@/components/ui/button';
+import type { Table } from "@tanstack/react-table";
 
-type DynamicFormProps = {
+type DynamicFormProps<TData> = {
+  table: Table<TData>;
   tableName: string;
   onSubmit: (value: Record<string, any>) => Promise<void> | void;
   onCancel?: () => void;
   initialValues?: Record<string, any>;
 };
 
-export function DynamicForm({ tableName, onSubmit, onCancel, initialValues }: DynamicFormProps) {
+export function DynamicForm<TData>({ tableName, onSubmit, onCancel, initialValues, table }: DynamicFormProps<TData>) {
   const tableMeta = Registry.describe().tables[tableName];
+
+  const columns = React.useMemo(
+    () =>
+      table
+        .getAllColumns()
+        .filter(
+          (column) =>
+            typeof column.accessorFn !== "undefined" && column.getCanHide(),
+        ),
+    [table],
+  );
 
   const editableFields = useMemo(() => {
     if (!tableMeta) return [] as [string, FieldMeta][];
@@ -66,11 +79,13 @@ export function DynamicForm({ tableName, onSubmit, onCancel, initialValues }: Dy
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {editableFields.map(([name, field]) => {
+      {editableFields.map(([name, field], index) => {
+        const column = columns[index];
         const helpText = (field.validation?.zod as any)?.description ?? (field.validation?.zod as any)?._def?.description;
         return (
           <div key={name} className="space-y-1">
             <FieldRenderer
+              column={column}
               field={field}
               value={values[name]}
               onChange={(v) => handleChange(name, v)}

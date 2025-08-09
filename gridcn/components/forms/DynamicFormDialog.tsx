@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Registry } from '@/lib/registry';
 import { DynamicForm } from './DynamicForm';
+import type { Table } from '@tanstack/react-table';
 
 export type DynamicFormDialogProps = {
   tableName: string;
@@ -14,6 +15,7 @@ export type DynamicFormDialogProps = {
   initialValues?: Record<string, any>;
   title?: string;
   onSubmit: (value: Record<string, any>) => Promise<void> | void;
+  table: Table<any>;
 };
 
 export function DynamicFormDialog({
@@ -24,6 +26,7 @@ export function DynamicFormDialog({
   initialValues,
   title,
   onSubmit,
+  table,
 }: DynamicFormDialogProps) {
   const tableLabel = Registry.describe().tables[tableName]?.label || tableName;
   const computedTitle = title ?? (mode === 'edit' ? `Edit ${tableLabel}` : `New ${tableLabel}`);
@@ -37,6 +40,7 @@ export function DynamicFormDialog({
           </DialogHeader>
           <div className="px-6 pb-6">
             <DynamicForm
+              table={table}
               tableName={tableName}
               initialValues={initialValues}
               onCancel={() => onOpenChange(false)}

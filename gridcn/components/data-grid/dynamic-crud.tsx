@@ -5,8 +5,7 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { Alert, AlertIcon, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardFooter, CardHeader, CardHeading, CardTable, CardToolbar } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardFooter, CardTable } from '@/components/ui/card';
 import { DataGrid } from '@/components/ui/data-grid';
 import { DataGridColumnHeader } from '@/components/ui/data-grid-column-header';
 import { DataGridPagination } from '@/components/ui/data-grid-pagination';
@@ -22,8 +21,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { DropdownMenu } from '@radix-ui/react-dropdown-menu';
 import { RiCheckboxCircleFill } from '@remixicon/react';
@@ -38,7 +35,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Ellipsis, Filter, Search, UserRoundPlus, X } from 'lucide-react';
+import { Ellipsis, Filter, Plus, Search, UserRoundPlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragEndEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -55,6 +52,9 @@ import {
   ContextMenuSeparator, 
   ContextMenuTrigger 
 } from '@/components/ui/context-menu';
+import { DataTableAdvancedToolbar } from '@/components/data-table/data-table-advanced-toolbar';
+import { DataTableFilterList } from '@/components/data-table/data-table-filter-list';
+import { DataTableSortList } from '@/components/data-table/data-table-sort-list';
 
 interface DynamicDataGridProps {
   tableName: string;
@@ -194,75 +194,6 @@ function formatFieldName(fieldName: string): string {
     .join(' ');
 }
 
-// Helper function to render cell content based on data type
-function renderCellContent(value: any, fieldName: string): React.ReactNode {
-  if (value === null || value === undefined) {
-    return <span className="text-muted-foreground">—</span>;
-  }
-
-  // Handle arrays (like sensors array in aircrafts)
-  if (Array.isArray(value)) {
-    return (
-      <div className="flex flex-wrap gap-1">
-        {value.map((item, index) => (
-          <Badge key={index} variant="secondary" size="sm">
-            {typeof item === 'object' ? JSON.stringify(item) : String(item)}
-          </Badge>
-        ))}
-      </div>
-    );
-  }
-
-  // Handle objects
-  if (typeof value === 'object') {
-    return <span className="font-mono text-xs">{JSON.stringify(value)}</span>;
-  }
-
-  // Handle numbers
-  if (typeof value === 'number') {
-    // Check if it's a currency-like field
-    if (fieldName.toLowerCase().includes('balance') || fieldName.toLowerCase().includes('price')) {
-      return <span className="font-mono">${value.toFixed(2)}</span>;
-    }
-    return <span className="font-mono">{value}</span>;
-  }
-
-  // Handle booleans
-  if (typeof value === 'boolean') {
-    return (
-      <Badge variant={value ? 'primary' : 'secondary'} size="sm">
-        {value ? 'Yes' : 'No'}
-      </Badge>
-    );
-  }
-
-  // Handle strings
-  const stringValue = String(value);
-  
-  // Email detection
-  if (fieldName.toLowerCase().includes('email') || stringValue.includes('@')) {
-    return <span className="text-blue-600 underline">{stringValue}</span>;
-  }
-
-  // Date detection
-  if (fieldName.toLowerCase().includes('time') || fieldName.toLowerCase().includes('date')) {
-    try {
-      const date = new Date(stringValue);
-      if (!isNaN(date.getTime())) {
-        return <span className="font-mono">{date.toLocaleDateString()}</span>;
-      }
-    } catch {
-      // Not a valid date, continue with regular string handling
-    }
-  }
-
-  // Country codes or flags
-  if (fieldName.toLowerCase().includes('country') || /^[\u{1F1E6}-\u{1F1FF}]{2}$/u.test(stringValue)) {
-    return <span className="text-lg">{stringValue}</span>;
-  }
-
-  return <span>{stringValue}</span>;
-}
 
 // Generate columns from registry meta schema
 function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, any>>[] {
@@ -303,9 +234,23 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
   });
 
   for (const [key, field] of fieldEntries) {
+    // Determine filter variant based on field type
+    const getFilterVariant = (field: any) => {
+      if (field.type === 'boolean') return 'boolean';
+      if (field.type === 'number' || field.type === 'bigint') return 'number';
+      if (field.type === 'array' && field.optional) return 'multiSelect';
+      if (field.type === 'union' && field.members?.some((m: any) => m.type === 'literal')) return 'select';
+      return 'text';
+    };
+
     columns.push({
       accessorKey: key,
       id: key,
+      enableColumnFilter: key !== '_id', // Enable filtering for all columns except _id
+      meta: {
+        label: field.render?.label || formatFieldName(key),
+        variant: getFilterVariant(field),
+      },
       header: ({ column }) => (
         <DataGridColumnHeader title={field.render?.label || formatFieldName(key)} visibility={true} column={column} />
       ),
@@ -436,6 +381,7 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
     enableSorting: false,
     enableHiding: false,
     enableResizing: false,
+    enableColumnFilter: false,
   });
 
   return columns;
@@ -634,117 +580,120 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
   });
 
   return (
-    <DataGrid
-      table={table}
-      recordCount={filteredData?.length || 0}
-      tableLayout={{
-        columnsPinnable: true,
-        columnsResizable: true,
-        columnsMovable: true,
-        columnsVisibility: true,
-        columnsDraggable: true,
-      }}
-    >
-      <Card>
-        <CardHeader className="py-4">
-          <CardHeading>
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <Search className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="ps-9 w-40"
-                />
-                {searchQuery.length > 0 && (
-                  <Button
-                    mode="icon"
-                    variant="ghost"
-                    className="absolute end-1.5 top-1/2 -translate-y-1/2 h-6 w-6"
-                    onClick={() => setSearchQuery('')}
-                  >
-                    <X />
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardHeading>
-          <CardToolbar>
-            <Button onClick={() => setShowAddModal(true)}>
-              <UserRoundPlus />
-              Add new
-            </Button>
-          </CardToolbar>
-        </CardHeader>
-        <CardTable>
-          <ScrollArea>
-            <DataGridTableDnd handleDragEnd={handleDragEnd} />
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </CardTable>
-        <CardFooter>
-          <DataGridPagination />
-        </CardFooter>
-      </Card>
-      <DynamicFormDialog
-        tableName={tableName}
-        mode="create"
-        open={showAddModal}
-        onOpenChange={setShowAddModal}
-        onSubmit={async (value) => {
-          try {
-            await mutateInsert({ table: tableName, value });
-            setShowAddModal(false);
-            toast.success('Row inserted');
-          } catch (e: any) {
-            toast.error(e?.message || 'Insert failed');
-          }
+    <>
+      <DataTableAdvancedToolbar table={table}>
+        <div className="flex items-center gap-2.5">
+          <div className="relative">
+            <Search className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="ps-9 w-40"
+            />
+            {searchQuery.length > 0 && (
+              <Button
+                mode="icon"
+                variant="ghost"
+                className="absolute end-1.5 top-1/2 -translate-y-1/2 h-6 w-6"
+                onClick={() => setSearchQuery('')}
+              >
+                <X />
+              </Button>
+            )}
+          </div>
+        </div>
+        <DataTableFilterList table={table} />
+        <DataTableSortList table={table} />
+        <Button onClick={() => setShowAddModal(true)} className="ml-auto">
+          <Plus />
+          New record
+        </Button>
+      </DataTableAdvancedToolbar>
+      <DataGrid
+        table={table}
+        recordCount={filteredData?.length || 0}
+        tableLayout={{
+          columnsPinnable: true,
+          columnsResizable: true,
+          columnsMovable: true,
+          columnsVisibility: true,
+          columnsDraggable: true,
         }}
-      />
+      >
+        <Card>
+          <CardTable>
+            <ScrollArea>
+              <DataGridTableDnd handleDragEnd={handleDragEnd} />
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </CardTable>
+          <CardFooter>
+            <DataGridPagination />
+          </CardFooter>
+        </Card>
+        <DynamicFormDialog
+          tableName={tableName}
+          table={table}
+          mode="create"
+          open={showAddModal}
+          onOpenChange={setShowAddModal}
+          onSubmit={async (value) => {
+            try {
+              await mutateInsert({ table: tableName, value });
+              setShowAddModal(false);
+              toast.success('Row inserted');
+            } catch (e: any) {
+              toast.error(e?.message || 'Insert failed');
+            }
+          }}
+        />
 
-      <DynamicFormDialog
-        tableName={tableName}
-        mode="edit"
-        open={showEditModal}
-        onOpenChange={(o) => { setShowEditModal(o); if (!o) setEditingRow(null); }}
-        initialValues={editingRow ?? undefined}
-        onSubmit={async (value) => {
-          if (!editingRow?._id) {
-            toast.error('Missing row id');
-            return;
-          }
-          try {
-            console.log("value", value);
-            await mutateUpdate({ table: tableName, id: editingRow._id as any, patch: value });
-            console.log("updated");
-            setShowEditModal(false);
-            setEditingRow(null);
-            toast.success('Row updated');
-          } catch (e: any) {
-            toast.error(e?.message || 'Update failed');
-          }
-        }}
-      />
+        <DynamicFormDialog
+          tableName={tableName}
+          table={table}
+          mode="edit"
+          open={showEditModal}
+          onOpenChange={(o) => { setShowEditModal(o); if (!o) setEditingRow(null); }}
+          initialValues={editingRow ?? undefined}
+          onSubmit={async (value) => {
+            if (!editingRow?._id) {
+              toast.error('Missing row id');
+              return;
+            }
+            try {
+              console.log("value", value);
+              await mutateUpdate({ table: tableName, id: editingRow._id as any, patch: value });
+              console.log("updated");
+              setShowEditModal(false);
+              setEditingRow(null);
+              toast.success('Row updated');
+            } catch (e: any) {
+              toast.error(e?.message || 'Update failed');
+            }
+          }}
+        />
 
-      <DynamicFormDialog
-        tableName={tableName}
-        mode="create"
-        title="Duplicate Row"
-        open={showDuplicateModal}
-        onOpenChange={(o) => { setShowDuplicateModal(o); if (!o) setDuplicatingRow(null); }}
-        initialValues={duplicatingRow ?? undefined}
-        onSubmit={async (value) => {
-          try {
-            await mutateInsert({ table: tableName, value });
-            setShowDuplicateModal(false);
-            setDuplicatingRow(null);
-            toast.success('Row duplicated successfully');
-          } catch (e: any) {
-            toast.error(e?.message || 'Duplicate failed');
-          }
-        }}
-      />
-    </DataGrid>
+        <DynamicFormDialog
+          tableName={tableName}
+          table={table}
+          mode="create"
+          title="Duplicate Row"
+          open={showDuplicateModal}
+          onOpenChange={(o) => { setShowDuplicateModal(o); if (!o) setDuplicatingRow(null); }}
+          initialValues={duplicatingRow ?? undefined}
+          onSubmit={async (value) => {
+            try {
+              await mutateInsert({ table: tableName, value });
+              setShowDuplicateModal(false);
+              setDuplicatingRow(null);
+              toast.success('Row duplicated successfully');
+            } catch (e: any) {
+              toast.error(e?.message || 'Duplicate failed');
+            }
+          }}
+        />
+      </DataGrid>
+    </>
   );
 }

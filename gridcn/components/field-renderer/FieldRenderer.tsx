@@ -15,8 +15,10 @@ import { JsonField } from './renderers/JsonField';
 import { ColorField } from './renderers/ColorField';
 import { ObjectField } from './renderers/ObjectField';
 import { ArrayField } from './renderers/ArrayField';
+import { Column } from '@tanstack/react-table';
 
 export type FieldRendererProps = {
+  column?: Column<any>;
   field: FieldMeta;
   value: any;
   onChange: (value: any) => void;
@@ -25,9 +27,9 @@ export type FieldRendererProps = {
   autoFocus?: boolean;
 };
 
-export function FieldRenderer({ field, value, onChange, isForm = false, isEditing = false, autoFocus = false }: FieldRendererProps) {
+export function FieldRenderer({ column, field, value, onChange, isForm = false, isEditing = false, autoFocus = false }: FieldRendererProps) {
   const component: FieldRendererType | undefined = field.render?.component;
-  const label = field.render?.label ?? field.name;
+  const label = column?.columnDef.meta?.label ?? field.name;
 
   switch (component) {
     case 'textarea':
