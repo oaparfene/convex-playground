@@ -3,6 +3,7 @@ import { callsignsTableMeta } from "./tables/callsigns";
 import { sensorsTableMeta } from "./tables/sensors";
 import { aircraftsTableMeta } from "./tables/aircrafts";
 import { scheduledFlightsTableMeta } from "./tables/scheduledFlights";
+import { rendererSamplesTableMeta } from "./tables/rendererSamples";
 
 export const Registry = {
   describe() {
@@ -11,6 +12,7 @@ export const Registry = {
       sensorsTableMeta,
       aircraftsTableMeta,
       scheduledFlightsTableMeta,
+      rendererSamplesTableMeta,
     ]);
   },
 };

@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { buildTableMeta } from "../adapters/zod";
+import { hexColorZ } from "../sharedSchemas";
 
 export const sensorsZ = z.object({
   name: z.string().describe("Sensor name"),
   type: z.string().describe("Sensor type"),
-  color: z.string().describe("Sensor display color"),
+  color: hexColorZ.describe("Sensor display color (hex)"),
   min_range: z.number().positive().default(0).describe("Minimum range in meters"),
   max_range: z.number().positive().default(100000).describe("Maximum range in meters"),
   resolution: z.number().positive().default(300).describe("Resolution in pixel per inch"),

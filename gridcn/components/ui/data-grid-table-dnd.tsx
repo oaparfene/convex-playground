@@ -36,8 +36,10 @@ function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unkno
   const { props } = useDataGrid();
   const { column } = header;
 
+  const isLocked = header.column.id === '__rowSelection__' || header.column.id === '__rowActions__';
   const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
     id: header.column.id,
+    disabled: isLocked,
   });
 
   const style: CSSProperties = {
@@ -53,17 +55,17 @@ function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unkno
   return (
     <DataGridTableHeadRowCell header={header} dndStyle={style} dndRef={setNodeRef}>
       <div className="flex items-center justify-start gap-0.5">
-        <Button
+        {!isLocked && <Button
           mode="icon"
           size="sm"
           variant="dim"
           className="-ms-2 size-6"
-          {...attributes}
-          {...listeners}
+          {...(!isLocked ? attributes : {})}
+          {...(!isLocked ? listeners : {})}
           aria-label="Drag to reorder"
         >
           <GripVertical className="opacity-50" aria-hidden="true" />
-        </Button>
+        </Button>}
         {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
         {props.tableLayout?.columnsResizable && column.getCanResize() && (
           <DataGridTableHeadRowCellResize header={header} />
@@ -74,8 +76,10 @@ function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unkno
 }
 
 function DataGridTableDndCell<TData>({ cell }: { cell: Cell<TData, unknown> }) {
+  const isLocked = cell.column.id === '__rowSelection__' || cell.column.id === '__rowActions__';
   const { isDragging, setNodeRef, transform, transition } = useSortable({
     id: cell.column.id,
+    disabled: isLocked,
   });
 
   const style: CSSProperties = {

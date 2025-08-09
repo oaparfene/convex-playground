@@ -172,51 +172,7 @@ function renderCellContent(value: any, fieldName: string): React.ReactNode {
 }
 
 // Render cell content using meta schema field definition
-function renderCellFromMeta(fieldName: string, value: any, tableName: string): React.ReactNode {
-  if (value === null || value === undefined) {
-    return <span className="text-muted-foreground">—</span>;
-  }
-
-  // Handle arrays
-  if (Array.isArray(value)) {
-    return (
-      <div className="flex flex-wrap gap-1">
-        {value.map((item, index) => (
-          <Badge key={index} variant="secondary" size="sm">
-            {typeof item === 'object' ? JSON.stringify(item) : String(item)}
-          </Badge>
-        ))}
-      </div>
-    );
-  }
-
-  // Objects
-  if (typeof value === 'object') {
-    return <span className="font-mono text-xs">{JSON.stringify(value)}</span>;
-  }
-
-  // Numbers
-  if (typeof value === 'number') {
-    return <span className="font-mono">{value}</span>;
-  }
-
-  // Booleans
-  if (typeof value === 'boolean') {
-    return (
-      <Badge variant={value ? 'primary' : 'secondary'} size="sm">
-        {value ? 'Yes' : 'No'}
-      </Badge>
-    );
-  }
-
-  // Strings
-  const stringValue = String(value);
-  if (fieldName.toLowerCase().includes('time') || fieldName.toLowerCase().includes('date')) {
-    const d = new Date(stringValue);
-    if (!isNaN(d.getTime())) return <span className="font-mono">{d.toLocaleString()}</span>;
-  }
-  return <span>{stringValue}</span>;
-}
+// Removed: renderCellFromMeta - FieldRenderer now handles display and edit
 
 // Generate columns dynamically based on the data structure
 function generateColumnsFromData(data: Record<string, any>[], tableName: string): ColumnDef<Record<string, any>>[] {
@@ -234,7 +190,7 @@ function generateColumnsFromData(data: Record<string, any>[], tableName: string)
     // Selection column
     {
       accessorKey: '_id',
-      id: 'select',
+      id: '__rowSelection__',
       header: () => <DataGridTableRowSelectAll />,
       cell: ({ row }) => <DataGridTableRowSelect row={row} />,
       enableSorting: false,
@@ -289,7 +245,7 @@ function generateColumnsFromData(data: Record<string, any>[], tableName: string)
 
   // Actions column
   columns.push({
-    id: 'actions',
+    id: '__rowActions__',
     header: '',
     cell: ({ row }) => <ActionsCell row={row} tableName={tableName} />,
     size: 60,
@@ -309,7 +265,7 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
   const columns: ColumnDef<Record<string, any>>[] = [
     {
       accessorKey: '_id',
-      id: 'select',
+      id: '__rowSelection__',
       header: () => <DataGridTableRowSelectAll />,
       cell: ({ row }) => <DataGridTableRowSelect row={row} />,
       enableSorting: false,
@@ -341,18 +297,18 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
         const update = (table.options.meta as any)?.updateRow;
 
         if (!field.behaviors?.editable || key === '_id') {
-          return renderCellFromMeta(key, value, tableName);
+          return <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />;
         }
         return (
           <div onDoubleClick={() => setEditing(true)}>
             {editing ? (
               <div className="flex items-center gap-2">
-                <FieldRenderer field={field} value={local} onChange={setLocal} />
+                <FieldRenderer field={field} value={local} onChange={setLocal} isForm={false} isEditing={true} autoFocus={true} />
                 <Button size="sm" onClick={() => { setEditing(false); update?.(row.original._id, { [key]: local }); }}>Save</Button>
                 <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setLocal(value); }}>Cancel</Button>
               </div>
             ) : (
-              renderCellFromMeta(key, value, tableName)
+              <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
             )}
           </div>
         );
@@ -365,7 +321,7 @@ function generateColumnsFromMeta(tableName: string): ColumnDef<Record<string, an
   }
 
   columns.push({
-    id: 'actions',
+    id: '__rowActions__',
     header: '',
     cell: ({ row }) => <ActionsCell row={row} tableName={tableName} />,
     size: 60,
@@ -413,6 +369,11 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (active && over && active.id !== over.id) {
+      // Prevent moving locked columns
+      const locked = ['__rowSelection__', '__rowActions__'];
+      if (locked.includes(String(active.id)) || locked.includes(String(over.id))) {
+        return;
+      }
       setColumnOrder((currentOrder) => {
         const oldIndex = currentOrder.indexOf(active.id as string);
         const newIndex = currentOrder.indexOf(over.id as string);

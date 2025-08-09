@@ -41,7 +41,6 @@ export const seedSensors = mutation({
     }
 
     const sensorTypes = ["Thermal", "Optical", "Multi-Spectral", "Radar", "LiDAR", "Infrared"];
-    const colorTypes = ["RGB", "Infrared", "Multi", "Monochrome", "False Color"];
     
     const sensors = [];
 
@@ -53,7 +52,7 @@ export const seedSensors = mutation({
       sensors.push({
         name: `${faker.helpers.arrayElement(sensorTypes)} ${faker.word.adjective()} ${faker.word.noun()}`,
         type: faker.helpers.arrayElement(sensorTypes),
-        color: faker.helpers.arrayElement(colorTypes),
+        color: faker.color.rgb({ format: 'hex' }),
         min_range: minRange,
         max_range: maxRange,
         resolution: faker.helpers.arrayElement([1920, 2048, 4096, 8192, 1080]),
@@ -317,7 +316,34 @@ export const seedAll = mutation({
     results.push(await _seedSensors(ctx));
     results.push(await _seedAircrafts(ctx));
     results.push(await _seedScheduledFlights(ctx));
+    // rendererSamples depends on nothing
+    results.push(await _seedRendererSamples(ctx));
     
     return results.join(", ");
   },
 });
+
+// New seeder for rendererSamples
+const _seedRendererSamples = async (ctx: any) => {
+  const existing = await ctx.db.query("rendererSamples").first();
+  if (existing) return "Renderer samples already seeded";
+
+  const sample = {
+    text: faker.lorem.words(3),
+    textarea: faker.lorem.sentences(2),
+    number: faker.number.int({ min: 0, max: 1000 }),
+    boolean: faker.datatype.boolean(),
+    date: faker.date.recent().toISOString(),
+    datetime: faker.date.soon().toISOString(),
+    select: faker.helpers.arrayElement(["optA", "optB", "optC"]),
+    id_select: faker.string.uuid(),
+    id_multi_select: [faker.string.uuid(), faker.string.uuid()],
+    json: { foo: "bar", n: 1 },
+    color: faker.color.rgb({ format: 'hex' }),
+    obj: { nested: "value" },
+    arr: ["a", 1, "b", 2],
+  };
+
+  await ctx.db.insert("rendererSamples", sample);
+  return "Renderer samples seeded";
+};
