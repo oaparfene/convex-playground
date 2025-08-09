@@ -10,8 +10,8 @@ export const rendererSamplesZ = z.object({
   date: dateStringZ.describe("Sample date"),
   datetime: datetimeStringZ.describe("Sample datetime"),
   select: z.enum(["optA", "optB", "optC"]).describe("Sample select"),
-  id_select: z.string().uuid().optional().describe("Sample id select"),
-  id_multi_select: z.array(z.string().uuid()).describe("Sample id multi select"),
+  id_select: z.string().uuid().optional().describe("Sample aircraft reference"),
+  id_multi_select: z.array(z.string().uuid()).describe("Sample sensors references"),
   json: z.any().describe("Sample JSON"),
   color: hexColorZ.describe("Sample color"),
   obj: z.object({ nested: z.string() }).describe("Sample object"),
@@ -24,8 +24,14 @@ export const rendererSamplesTableMeta = buildTableMeta("rendererSamples", render
     date: { render: { component: "date" } },
     datetime: { render: { component: "datetime" } },
     select: { render: { component: "select", options: { values: ["optA", "optB", "optC"] } } },
-    id_select: { render: { component: "id-select" } },
-    id_multi_select: { render: { component: "id-multi-select" } },
+    id_select: { 
+      relation: { kind: "relation", table: "aircrafts", cardinality: "one", displayField: "name" },
+      render: { component: "id-select" } 
+    },
+    id_multi_select: { 
+      relation: { kind: "relation", table: "sensors", cardinality: "many", displayField: "name" },
+      render: { component: "id-multi-select" } 
+    },
     json: { render: { component: "json" } },
     color: { render: { component: "color" } },
     obj: { render: { component: "object" } },

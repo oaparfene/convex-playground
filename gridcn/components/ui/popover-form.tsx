@@ -59,7 +59,7 @@ export function PopoverForm({
       {open && (
         <motion.div
           layoutId={`${title}-wrapper`}
-          className="fixed p-1 overflow-hidden bg-muted shadow-[0_0_0_1px_rgba(0,0,0,0.08),0px_1px_2px_rgba(0,0,0,0.04)] outline-none z-[9999]"
+          className="fixed p-1 overflow-hidden bg-muted shadow-[0_0_0_1px_rgba(0,0,0,0.08),0px_1px_2px_rgba(0,0,0,0.04)] outline-none z-[9998]"
           ref={ref}
           style={{ 
             borderRadius: 10, 
@@ -174,6 +174,17 @@ const useClickOutside = (
       if (!ref.current || ref.current.contains(event.target as Node)) {
         return
       }
+      
+      // Check if the click is on a select dropdown (which is portaled)
+      const target = event.target as Element;
+      const selectContent = target.closest('[data-radix-select-content]');
+      const selectViewport = target.closest('[data-radix-select-viewport]');
+      const selectItem = target.closest('[data-radix-select-item]');
+      
+      if (selectContent || selectViewport || selectItem) {
+        return
+      }
+      
       handleOnClickOutside(event)
     }
     document.addEventListener("mousedown", listener)

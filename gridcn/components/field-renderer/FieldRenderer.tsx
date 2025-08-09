@@ -43,9 +43,9 @@ export function FieldRenderer({ field, value, onChange, isForm = false, isEditin
     case 'select':
       return <SelectField label={label} showLabel={isForm} field={field} value={value} onChange={onChange} isEditing={isEditing} autoFocus={autoFocus} />;
     case 'id-select':
-      return <IdSelectField label={label} showLabel={isForm} value={value} onChange={onChange} isEditing={isEditing} autoFocus={autoFocus} />;
+      return <IdSelectField field={field} label={label} showLabel={isForm} value={value} onChange={onChange} isEditing={isEditing} autoFocus={autoFocus} />;
     case 'id-multi-select':
-      return <IdMultiSelectField label={label} showLabel={isForm} value={value} onChange={onChange} isEditing={isEditing} autoFocus={autoFocus} />;
+      return <IdMultiSelectField field={field} label={label} showLabel={isForm} value={value} onChange={onChange} isEditing={isEditing} autoFocus={autoFocus} />;
     case 'json':
       return <JsonField label={label} showLabel={isForm} value={value} onChange={onChange} isEditing={isEditing} autoFocus={autoFocus} />;
     case 'color':
