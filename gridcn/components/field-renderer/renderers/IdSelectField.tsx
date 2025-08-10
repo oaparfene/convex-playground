@@ -25,7 +25,7 @@ export function IdSelectField({ field, label, showLabel, value, onChange, isEdit
   const displayValue = React.useMemo(() => {
     if (!value || !relatedData || !field?.relation) return value ?? '—';
     
-    const relatedItem = relatedData.find((item: any) => item._id === value);
+    const relatedItem = relatedData.data.find((item: any) => item._id === value);
     if (!relatedItem) return value;
     
     const displayField = field.relation.displayField;
@@ -42,7 +42,7 @@ export function IdSelectField({ field, label, showLabel, value, onChange, isEdit
           <SelectItem value="__none__">
             <span className="text-muted-foreground">None</span>
           </SelectItem>
-          {relatedData.map((item: any) => (
+          {relatedData.data.map((item: any) => (
             <SelectItem key={item._id} value={item._id}>
               {field.relation!.displayField ? item[field.relation!.displayField] : item._id}
             </SelectItem>

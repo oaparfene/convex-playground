@@ -9,9 +9,9 @@ export default function TablePage() {
   const params = useParams<{ tableName: string }>();
   const tableName = params.tableName as string;
 
-  const data = useQuery(genericListQuery, { table: tableName });
+  const result = useQuery(genericListQuery, { table: tableName });
 
-  if (data === undefined) {
+  if (result === undefined) {
     return (
       <div className="p-8 text-center">
         <h1 className="text-2xl font-bold mb-4">Loading...</h1>
@@ -20,12 +20,17 @@ export default function TablePage() {
     );
   }
 
+  // Handle both old format (array) and new format ({ data, relations })
+  const data = Array.isArray(result) ? result : result.data || [];
+  const relations = Array.isArray(result) ? {} : result.relations || {};
+
   return (
     <div className="p-8">
       <h1 className="text-3xl font-bold mb-6 capitalize">{tableName}</h1>
       <DynamicDataGrid
         tableName={tableName}
-        data={data || []}
+        data={data}
+        relations={relations}
       />
     </div>
   );

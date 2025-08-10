@@ -128,11 +128,9 @@ export function DataTableFilterList<TData>({
 
   const onFilterAdd = React.useCallback(() => {
     const column = columns[0];
-    console.log("columns", columns);
     if (!column || columns.length === 0) return;
 
     const variant = column.columnDef.meta?.variant ?? "text";
-    console.log(`Adding filter for column ${column.id}, meta:`, column.columnDef.meta, `variant: ${variant}`);
 
     const currentFilters = filters || [];
     debouncedSetFilters([
@@ -371,12 +369,17 @@ function DataTableFilterItem<TData>({
 
   const column = columns.find((column) => column.id === filter.id);
 
+  if (!column) return null;
+
   const joinOperatorListboxId = `${filterItemId}-join-operator-listbox`;
   const fieldListboxId = `${filterItemId}-field-listbox`;
   const operatorListboxId = `${filterItemId}-operator-listbox`;
   const inputId = `${filterItemId}-input`;
 
-  const columnMeta = column?.columnDef.meta;
+
+  const columnMeta = column.columnDef.meta;
+  if (!columnMeta) return null;
+
   const filterOperators = getFilterOperators(filter.variant);
 
   const onItemKeyDown = React.useCallback(
@@ -586,7 +589,7 @@ function onFilterInputRender<TData>({
   filter: ExtendedColumnFilter<TData>;
   inputId: string;
   column: Column<TData>;
-  columnMeta?: ColumnMeta<TData, unknown>;
+  columnMeta: ColumnMeta<TData, unknown>;
   onFilterUpdate: (
     filterId: string,
     updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
@@ -687,7 +690,6 @@ function onFilterInputRender<TData>({
       const inputListboxId = `${inputId}-listbox`;
       
       if (filter.variant === "select") {
-        // Single select
         return (
           <Select
             open={showValueSelector}

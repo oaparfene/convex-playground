@@ -14,7 +14,7 @@ export const aircraftsTableMeta = buildTableMeta("aircrafts", aircraftsZ, {
   tableLabel: "Aircrafts",
   fieldOverrides: {
     sensors: {
-      relation: { kind: "relation", table: "sensors", cardinality: "many", displayField: "name" },
+      relation: { kind: "relation", table: "sensors", cardinality: "many", displayField: "name", colorField: "color" },
       render: { component: "id-multi-select" },
       filterOperators: ["in", "notIn", "isNull", "isNotNull"],
     },

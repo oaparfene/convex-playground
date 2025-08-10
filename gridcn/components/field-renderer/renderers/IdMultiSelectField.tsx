@@ -30,7 +30,8 @@ export function IdMultiSelectField({ field, label, showLabel, value, onChange, i
     if (!relatedData || !field?.relation) return currentValues.map(id => ({ id, display: id, color: undefined }));
     
     return currentValues.map(id => {
-      const relatedItem = relatedData.find((item: any) => item._id === id);
+      console.log("relatedData", relatedData);
+      const relatedItem = relatedData.data.find((item: any) => item._id === id);
       const displayField = field.relation!.displayField;
       const colorField = field.relation!.colorField;
       return {
@@ -54,7 +55,7 @@ export function IdMultiSelectField({ field, label, showLabel, value, onChange, i
 
   const availableOptions = React.useMemo(() => {
     if (!relatedData) return [];
-    return relatedData.filter((item: any) => !currentValues.includes(item._id));
+    return relatedData.data.filter((item: any) => !currentValues.includes(item._id));
   }, [relatedData, currentValues]);
 
   const asCsv = currentValues.join(',');

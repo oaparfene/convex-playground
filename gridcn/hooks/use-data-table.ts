@@ -21,7 +21,7 @@ export interface UseDataTableProps {
   handleOpenEdit: (value: Record<string, any>) => void;
   handleDeleteRow: (id: string) => void;
   handleDuplicateRow: (value: Record<string, any>) => void;
-  relatedDataLookup?: Record<string, Record<string, any>[]>;
+  relatedDataLookup: Record<string, Record<string, any>[]>;
 }
 
 export function useDataTable({

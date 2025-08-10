@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { tableSchemas } from "../lib/registry/schemas";
+import { Registry } from "../lib/registry";
 
 export const list = query({
   args: {
@@ -15,7 +16,40 @@ export const list = query({
     const all = await q.collect();
     const start = Math.max(0, args.offset ?? 0);
     const end = args.limit ? start + args.limit : undefined;
-    return all.slice(start, end);
+    const mainData = all.slice(start, end);
+
+    // Get table metadata to find relations
+    const registry = Registry.describe();
+    const tableMeta = registry.tables[args.table];
+    
+    if (!tableMeta) {
+      return { data: mainData, relations: {} };
+    }
+
+    // Find all relation tables that need to be fetched
+    const relationTables = new Set<string>();
+    Object.values(tableMeta.fields).forEach((field) => {
+      if (field.relation?.table) {
+        relationTables.add(field.relation.table);
+      }
+    });
+
+    // Fetch all relation data
+    const relations: Record<string, any[]> = {};
+    for (const relationTable of relationTables) {
+      try {
+        const relationData = await ctx.db.query(relationTable as any).collect();
+        relations[relationTable] = relationData;
+      } catch (error) {
+        console.warn(`Failed to fetch relation data for table: ${relationTable}`, error);
+        relations[relationTable] = [];
+      }
+    }
+
+    return {
+      data: mainData,
+      relations,
+    };
   },
 });
 

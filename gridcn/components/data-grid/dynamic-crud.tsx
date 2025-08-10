@@ -1,96 +1,100 @@
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardFooter, CardTable } from '@/components/ui/card';
-import { DataGrid } from '@/components/ui/data-grid';
-import { DataGridPagination } from '@/components/ui/data-grid-pagination';
-import { DataGridTableDnd } from '@/components/ui/data-grid-table-dnd';
-import { Input } from '@/components/ui/input';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Plus, Search, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { Registry } from '@/lib/registry';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { DynamicFormDialog } from '@/components/forms/DynamicFormDialog';
-import { DataTableAdvancedToolbar } from '@/components/data-table/data-table-advanced-toolbar';
-import { DataTableFilterList } from '@/components/data-table/data-table-filter-list';
-import { DataTableSortList } from '@/components/data-table/data-table-sort-list';
-import { useDataTable } from '@/hooks/use-data-table';
-import { useTableFilters } from '@/hooks/use-table-filters';
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardFooter, CardTable } from "@/components/ui/card";
+import { DataGrid } from "@/components/ui/data-grid";
+import { DataGridPagination } from "@/components/ui/data-grid-pagination";
+import { DataGridTableDnd } from "@/components/ui/data-grid-table-dnd";
+import { Input } from "@/components/ui/input";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Copy, Download, Plus, Search, Trash, X } from "lucide-react";
+import { toast } from "sonner";
+import { Registry } from "@/lib/registry";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
+import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
+import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { DataTableDeleteDialog } from "@/components/data-table/data-table-delete-dialog";
+import { DataTableExportPopover } from "@/components/data-table/data-table-export-popover";
+import { DataTableBatchEditDialog } from "@/components/data-table/data-table-batch-edit-dialog";
+import { useDataTable } from "@/hooks/use-data-table";
+import { useTableFilters } from "@/hooks/use-table-filters";
+import { useActionBar } from "@/hooks/use-action-bar";
+import DataTableDynamicForms from "../data-table/data-table-dynamic-forms";
+import { DataTableActionBar, DataTableActionBarAction, DataTableActionBarSelection } from "../data-table/data-table-action-bar";
+import { Separator } from "@/components/ui/separator";
 
 interface DynamicDataGridProps {
   tableName: string;
   data: Record<string, any>[];
+  relations: Record<string, Record<string, any>[]>;
 }
 
-export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
+export function DynamicDataGrid({ 
+  tableName, 
+  data: inputData, 
+  relations = {} 
+}: DynamicDataGridProps) {
   const mutateUpdate = useMutation(api.registry.update);
   const mutateInsert = useMutation(api.registry.insert);
   const mutateDelete = useMutation(api.registry.remove);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
-  const [duplicatingRow, setDuplicatingRow] = useState<Record<string, any> | null>(null);
+  const [editingRow, setEditingRow] = useState<Record<string, any> | null>(
+    null
+  );
+  const [duplicatingRow, setDuplicatingRow] = useState<Record<
+    string,
+    any
+  > | null>(null);
 
-  // Get table metadata to identify relation fields
+  // Get table metadata
   const tableMeta = useMemo(() => {
     return Registry.describe().tables[tableName];
   }, [tableName]);
 
-  // Get all unique relation tables that we need to fetch
-  const relationTables = useMemo(() => {
-    if (!tableMeta) return [];
-    
-    const tables = new Set<string>();
-    Object.values(tableMeta.fields).forEach(field => {
-      if (field.relation?.table) {
-        tables.add(field.relation.table);
-      }
-    });
-    return Array.from(tables);
-  }, [tableMeta]);
-
-  // Fetch all related table data
-  const aircraftsData = useQuery(api.registry.list, relationTables.includes('aircrafts') ? { table: 'aircrafts' } : 'skip');
-  const sensorsData = useQuery(api.registry.list, relationTables.includes('sensors') ? { table: 'sensors' } : 'skip');
-  const callsignsData = useQuery(api.registry.list, relationTables.includes('callsigns') ? { table: 'callsigns' } : 'skip');
-
-  // Create lookup for all related data
+  // Use the relations passed from the server (no more client-side fetching needed!)
   const relatedDataLookup = useMemo(() => {
+    // Extract just the data arrays from the server response
     const lookup: Record<string, Record<string, any>[]> = {};
-    if (aircraftsData) lookup.aircrafts = aircraftsData;
-    if (sensorsData) lookup.sensors = sensorsData;
-    if (callsignsData) lookup.callsigns = callsignsData;
+    Object.entries(relations).forEach(([tableName, result]) => {
+      // The relations are already just arrays from the server
+      lookup[tableName] = result;
+    });
     return lookup;
-  }, [aircraftsData, sensorsData, callsignsData]);
+  }, [relations]);
 
   // Get column IDs for filtering
   const columnIds = useMemo(() => {
     if (!tableMeta) return [];
-    return Object.keys(tableMeta.fields).filter(key => key !== '_id');
+    return Object.keys(tableMeta.fields).filter((key) => key !== "_id");
   }, [tableMeta]);
 
   // Apply URL-based filters
-  const { filteredData: urlFilteredData } = useTableFilters(columnIds, data, relatedDataLookup);
+  const { filteredData: urlFilteredData } = useTableFilters(
+    columnIds,
+    inputData,
+    relatedDataLookup
+  );
 
   // Apply search query on top of URL filters
   const filteredData = useMemo(() => {
     if (!searchQuery) return urlFilteredData;
-    
+
     const searchLower = searchQuery.toLowerCase();
     return urlFilteredData.filter((item) => {
       // Build searchable content including original values
       const searchableContent: string[] = [];
-      
+
       // Add all original field values
       Object.entries(item).forEach(([fieldName, value]) => {
         if (value != null) {
           if (Array.isArray(value)) {
-            searchableContent.push(...value.map(v => String(v)));
+            searchableContent.push(...value.map((v) => String(v)));
           } else {
             searchableContent.push(String(value));
           }
@@ -103,19 +107,23 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
           if (field.relation && item[fieldName] != null) {
             const relatedData = relatedDataLookup[field.relation.table];
             const displayField = field.relation.displayField;
-            
+
             if (relatedData && displayField) {
               if (Array.isArray(item[fieldName])) {
                 // Handle multi-select relation (id_multi_select)
                 item[fieldName].forEach((id: string) => {
-                  const relatedItem = relatedData.find((r: any) => r._id === id);
+                  const relatedItem = relatedData.find(
+                    (r: any) => r._id === id
+                  );
                   if (relatedItem && relatedItem[displayField]) {
                     searchableContent.push(String(relatedItem[displayField]));
                   }
                 });
               } else {
                 // Handle single relation (id_select)
-                const relatedItem = relatedData.find((r: any) => r._id === item[fieldName]);
+                const relatedItem = relatedData.find(
+                  (r: any) => r._id === item[fieldName]
+                );
                 if (relatedItem && relatedItem[displayField]) {
                   searchableContent.push(String(relatedItem[displayField]));
                 }
@@ -126,10 +134,7 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
       }
 
       // Check if search query matches any of the searchable content
-      return searchableContent
-        .join(' ')
-        .toLowerCase()
-        .includes(searchLower);
+      return searchableContent.join(" ").toLowerCase().includes(searchLower);
     });
   }, [urlFilteredData, searchQuery, tableMeta, relatedDataLookup]);
 
@@ -142,15 +147,40 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
   const handleDeleteRow = async (id: string) => {
     try {
       await mutateDelete({ table: tableName, id: id as any });
-      toast.success('Row deleted');
+      toast.success("Row deleted");
     } catch (e: any) {
-      toast.error(e?.message || 'Delete failed');
+      toast.error(e?.message || "Delete failed");
     }
   };
 
   const handleDuplicateRow = (value: Record<string, any>) => {
     setDuplicatingRow(value);
     setShowDuplicateModal(true);
+  };
+
+  // Batch operation handlers
+  const handleBatchDelete = async (ids: string[]) => {
+    try {
+      await Promise.all(ids.map(id => mutateDelete({ table: tableName, id: id as any })));
+    } catch (e: any) {
+      throw new Error(e?.message || "Batch delete failed");
+    }
+  };
+
+  const handleBatchUpdate = async (fieldKey: string, value: any, selectedIds: string[]) => {
+    try {
+      await Promise.all(
+        selectedIds.map(id => 
+          mutateUpdate({ 
+            table: tableName, 
+            id: id as any, 
+            patch: { [fieldKey]: value } 
+          })
+        )
+      );
+    } catch (e: any) {
+      throw new Error(e?.message || "Batch update failed");
+    }
   };
 
   // Use the custom data table hook
@@ -165,8 +195,24 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
     relatedDataLookup,
   });
 
+  // Use the action bar hook
+  const {
+    selectedCount,
+    showDeleteDialog,
+    setShowDeleteDialog,
+    isDeleting,
+    handleDeleteClick,
+    handleDeleteConfirm,
+    handleBatchUpdate: actionBarBatchUpdate,
+  } = useActionBar({
+    table,
+    onDelete: handleBatchDelete,
+    onBatchUpdate: handleBatchUpdate,
+  });
+
   return (
     <>
+      {/* Toolbar */}
       <DataTableAdvancedToolbar table={table}>
         <div className="flex items-center gap-2.5">
           <div className="relative">
@@ -182,7 +228,7 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
                 mode="icon"
                 variant="ghost"
                 className="absolute end-1.5 top-1/2 -translate-y-1/2 h-6 w-6"
-                onClick={() => setSearchQuery('')}
+                onClick={() => setSearchQuery("")}
               >
                 <X />
               </Button>
@@ -196,6 +242,37 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
           New record
         </Button>
       </DataTableAdvancedToolbar>
+
+      {/* Batch Action Bar */}
+      <DataTableActionBar table={table} >
+        <DataTableActionBarSelection table={table} />
+        <Separator orientation="vertical" className="hidden data-[orientation=vertical]:h-5 sm:block" />
+        
+        <DataTableBatchEditDialog
+          table={table}
+          tableName={tableName}
+          onBatchUpdate={actionBarBatchUpdate}
+        >
+          <DataTableActionBarAction>
+            <Copy />
+            Edit
+          </DataTableActionBarAction>
+        </DataTableBatchEditDialog>
+        
+        <DataTableExportPopover table={table}>
+          <DataTableActionBarAction>
+            <Download />
+            Export
+          </DataTableActionBarAction>
+        </DataTableExportPopover>
+        
+        <DataTableActionBarAction onClick={handleDeleteClick}>
+          <Trash />
+          Delete
+        </DataTableActionBarAction>
+      </DataTableActionBar>
+
+      {/* Grid Body */}
       <DataGrid
         table={table}
         recordCount={filteredData?.length || 0}
@@ -218,68 +295,32 @@ export function DynamicDataGrid({ tableName, data }: DynamicDataGridProps) {
             <DataGridPagination />
           </CardFooter>
         </Card>
-        <DynamicFormDialog
-          tableName={tableName}
-          table={table}
-          mode="create"
-          open={showAddModal}
-          onOpenChange={setShowAddModal}
-          onSubmit={async (value) => {
-            try {
-              await mutateInsert({ table: tableName, value });
-              setShowAddModal(false);
-              toast.success('Row inserted');
-            } catch (e: any) {
-              toast.error(e?.message || 'Insert failed');
-            }
-          }}
-        />
-
-        <DynamicFormDialog
-          tableName={tableName}
-          table={table}
-          mode="edit"
-          open={showEditModal}
-          onOpenChange={(o) => { setShowEditModal(o); if (!o) setEditingRow(null); }}
-          initialValues={editingRow ?? undefined}
-          onSubmit={async (value) => {
-            if (!editingRow?._id) {
-              toast.error('Missing row id');
-              return;
-            }
-            try {
-              console.log("value", value);
-              await mutateUpdate({ table: tableName, id: editingRow._id as any, patch: value });
-              console.log("updated");
-              setShowEditModal(false);
-              setEditingRow(null);
-              toast.success('Row updated');
-            } catch (e: any) {
-              toast.error(e?.message || 'Update failed');
-            }
-          }}
-        />
-
-        <DynamicFormDialog
-          tableName={tableName}
-          table={table}
-          mode="create"
-          title="Duplicate Row"
-          open={showDuplicateModal}
-          onOpenChange={(o) => { setShowDuplicateModal(o); if (!o) setDuplicatingRow(null); }}
-          initialValues={duplicatingRow ?? undefined}
-          onSubmit={async (value) => {
-            try {
-              await mutateInsert({ table: tableName, value });
-              setShowDuplicateModal(false);
-              setDuplicatingRow(null);
-              toast.success('Row duplicated successfully');
-            } catch (e: any) {
-              toast.error(e?.message || 'Duplicate failed');
-            }
-          }}
-        />
       </DataGrid>
+
+      {/* Dynamic Forms */}
+      <DataTableDynamicForms
+        tableName={tableName}
+        table={table}
+        showAddModal={showAddModal}
+        setShowAddModal={setShowAddModal}
+        showEditModal={showEditModal}
+        setShowEditModal={setShowEditModal}
+        showDuplicateModal={showDuplicateModal}
+        setShowDuplicateModal={setShowDuplicateModal}
+        duplicatingRow={duplicatingRow}
+        setDuplicatingRow={setDuplicatingRow}
+        editingRow={editingRow}
+        setEditingRow={setEditingRow}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DataTableDeleteDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        selectedCount={selectedCount}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
     </>
   );
 }

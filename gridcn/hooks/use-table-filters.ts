@@ -63,9 +63,6 @@ function applyFilter(
   const { id, value, operator, variant } = filter;
   const fieldValue = row[id];
 
-  // Debug logging
-  console.log('Applying filter:', { id, value, operator, variant, fieldValue });
-
   // Handle empty/not empty operators
   if (operator === 'isEmpty') {
     return fieldValue == null || fieldValue === '' || (Array.isArray(fieldValue) && fieldValue.length === 0);

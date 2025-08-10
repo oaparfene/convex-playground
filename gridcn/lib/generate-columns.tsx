@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 // Helper function to format field names for display
-function formatFieldName(fieldName: string): string {
+export function formatFieldName(fieldName: string): string {
   return fieldName
     .replace(/_/g, ' ')
     .split(' ')
@@ -42,7 +42,7 @@ function getFieldIcon(field: any, key: string): LucideIcon {
 // Generate columns from registry meta schema
 export function generateColumnsFromMeta(
   tableName: string, 
-  relatedDataLookup?: Record<string, Record<string, any>[]>,
+  relatedDataLookup: Record<string, Record<string, any>[]>,
   data?: Record<string, any>[]
 ): ColumnDef<Record<string, any>>[] {
   const meta = Registry.describe().tables[tableName];
@@ -183,7 +183,7 @@ export function generateColumnsFromMeta(
       
       // ID fields that reference other tables (relation fields)
       if (field.relation) {
-        const relatedData = relatedDataLookup?.[field.relation.table] || [];
+        const relatedData = relatedDataLookup[field.relation.table];
         const displayField = field.relation.displayField;
         
         const options = relatedData.map((item: any) => ({
@@ -210,7 +210,7 @@ export function generateColumnsFromMeta(
     };
 
     const filterMeta = getFilterMetadata(field, key);
-    
+
     columns.push({
       accessorKey: key,
       id: key,
