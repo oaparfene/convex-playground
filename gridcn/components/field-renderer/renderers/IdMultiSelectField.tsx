@@ -30,7 +30,7 @@ export function IdMultiSelectField({ field, label, showLabel, value, onChange, i
     if (!relatedData || !field?.relation) return currentValues.map(id => ({ id, display: id, color: undefined }));
     
     return currentValues.map(id => {
-      console.log("relatedData", relatedData);
+      //console.log("relatedData", relatedData);
       const relatedItem = relatedData.data.find((item: any) => item._id === id);
       const displayField = field.relation!.displayField;
       const colorField = field.relation!.colorField;

@@ -183,6 +183,7 @@ export function generateColumnsFromMeta(
       
       // ID fields that reference other tables (relation fields)
       if (field.relation) {
+        console.log("field.relation", field);
         const relatedData = relatedDataLookup[field.relation.table];
         const displayField = field.relation.displayField;
         
@@ -190,14 +191,18 @@ export function generateColumnsFromMeta(
           label: displayField ? String(item[displayField] || item._id) : String(item._id),
           value: String(item._id),
         }));
-        
-        return {
+
+        const result = {
           label: baseLabel,
-          variant: field.relation.type === 'id_multi_select' ? 'multiSelect' as const : 'select' as const,
+          variant: field.relation.cardinality === 'many' ? 'multiSelect' as const : 'select' as const,
           placeholder: `Select ${baseLabel.toLowerCase()}...`,
           options,
           icon,
-        };
+        }
+
+        console.log("result", result);
+        
+        return result;
       }
       
       // Default to text

@@ -116,6 +116,7 @@ export function DataTableFilterList<TData>({
         throttleMs,
       }),
   );
+  console.log("filters", filters);
   const debouncedSetFilters = useDebouncedCallback(setFilters, debounceMs);
 
   const [joinOperator, setJoinOperator] = useQueryState(
@@ -760,26 +761,28 @@ function onFilterInputRender<TData>({
               id={inputListboxId}
               className="w-[200px] origin-[var(--radix-popover-content-transform-origin)]"
             >
-              <FacetedInput
-                aria-label={`Search ${columnMeta?.label} options`}
-                placeholder={columnMeta?.placeholder ?? "Search options..."}
-              />
-              <FacetedList>
-                <FacetedEmpty>No options found.</FacetedEmpty>
-                <FacetedGroup>
-                  {columnMeta?.options?.map((option) => (
-                    <FacetedItem key={option.value} value={option.value}>
-                      {option.icon && <option.icon />}
-                      <span>{option.label}</span>
-                      {option.count && (
-                        <span className="ml-auto font-mono text-xs">
-                          {option.count}
-                        </span>
-                      )}
-                    </FacetedItem>
-                  ))}
-                </FacetedGroup>
-              </FacetedList>
+              <Command>
+                <FacetedInput
+                  aria-label={`Search ${columnMeta?.label} options`}
+                  placeholder={columnMeta?.placeholder ?? "Search options..."}
+                />
+                <FacetedList>
+                  <FacetedEmpty>No options found.</FacetedEmpty>
+                  <FacetedGroup>
+                    {columnMeta?.options?.map((option) => (
+                      <FacetedItem key={option.value} value={option.value}>
+                        {option.icon && <option.icon />}
+                        <span>{option.label}</span>
+                        {option.count && (
+                          <span className="ml-auto font-mono text-xs">
+                            {option.count}
+                          </span>
+                        )}
+                      </FacetedItem>
+                    ))}
+                  </FacetedGroup>
+                </FacetedList>
+              </Command>
             </FacetedContent>
           </Faceted>
         );

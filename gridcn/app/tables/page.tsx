@@ -9,6 +9,7 @@ const tables = [
   { name: 'sensors', description: 'View and edit sensor specifications' },
   { name: 'aircrafts', description: 'Aircraft configurations and sensor assignments' },
   { name: 'scheduledFlights', description: 'Flight scheduling and assignments' },
+  { name: 'rendererSamples', description: 'Renderer samples' },
 ];
 
 export default function TablesPage() {
