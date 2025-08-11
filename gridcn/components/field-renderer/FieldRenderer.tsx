@@ -16,6 +16,7 @@ import { ColorField } from './renderers/ColorField';
 import { ObjectField } from './renderers/ObjectField';
 import { ArrayField } from './renderers/ArrayField';
 import { Column } from '@tanstack/react-table';
+import { formatFieldName } from '@/lib/generate-columns';
 
 export type FieldRendererProps = {
   column?: Column<any>;
@@ -29,7 +30,7 @@ export type FieldRendererProps = {
 
 export function FieldRenderer({ column, field, value, onChange, isForm = false, isEditing = false, autoFocus = false }: FieldRendererProps) {
   const component: FieldRendererType | undefined = field.render?.component;
-  const label = column?.columnDef.meta?.label ?? field.name;
+  const label = column?.columnDef.meta?.label ?? formatFieldName(field.name);
 
   switch (component) {
     case 'textarea':

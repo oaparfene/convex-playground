@@ -7,13 +7,13 @@ import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
 import { Registry } from '@/lib/registry';
 import { ActionsCell } from '@/components/data-grid/actions-cell';
 import { RowContextMenu } from '@/components/data-grid/row-context-menu';
-import { 
-  Text, 
-  Hash, 
-  Calendar, 
-  Clock, 
-  ToggleLeft, 
-  List, 
+import {
+  Text,
+  Hash,
+  Calendar,
+  Clock,
+  ToggleLeft,
+  List,
   ChevronDown,
   Link,
   type LucideIcon
@@ -41,7 +41,7 @@ function getFieldIcon(field: any, key: string): LucideIcon {
 
 // Generate columns from registry meta schema
 export function generateColumnsFromMeta(
-  tableName: string, 
+  tableName: string,
   relatedDataLookup: Record<string, Record<string, any>[]>,
   data?: Record<string, any>[]
 ): ColumnDef<Record<string, any>>[] {
@@ -86,7 +86,7 @@ export function generateColumnsFromMeta(
     const getFilterMetadata = (field: any, key: string) => {
       const baseLabel = field.render?.label || formatFieldName(key);
       const icon = getFieldIcon(field, key);
-      
+
       // Boolean fields
       if (field.type.type === 'boolean') {
         return {
@@ -96,7 +96,7 @@ export function generateColumnsFromMeta(
           icon,
         };
       }
-      
+
       // Number fields
       if (field.type.type === 'number' || field.type.type === 'bigint') {
         // Check if this should be a range filter based on data spread
@@ -104,11 +104,11 @@ export function generateColumnsFromMeta(
           const values = data
             .map(row => row[key])
             .filter(val => typeof val === 'number' && !isNaN(val));
-          
+
           if (values.length > 0) {
             const min = Math.min(...values);
             const max = Math.max(...values);
-            
+
             // Use range filter if there's meaningful spread (more than 10 unique values or wide range)
             const uniqueValues = new Set(values);
             if (uniqueValues.size > 10 || (max - min) > 10) {
@@ -122,7 +122,7 @@ export function generateColumnsFromMeta(
             }
           }
         }
-        
+
         return {
           label: baseLabel,
           variant: 'number' as const,
@@ -130,7 +130,7 @@ export function generateColumnsFromMeta(
           icon,
         };
       }
-      
+
       // Date/time fields
       if (key.toLowerCase().includes('time') || key.toLowerCase().includes('date') || field.type === 'number' && key.includes('Time')) {
         return {
@@ -140,7 +140,7 @@ export function generateColumnsFromMeta(
           icon,
         };
       }
-      
+
       // Array fields (multi-select)
       if (field.type.type === 'array') {
         return {
@@ -151,27 +151,27 @@ export function generateColumnsFromMeta(
           icon,
         };
       }
-      
+
       // Union fields with literals (select)
       if (field.type.type === 'enum') {
         const literals = field.validation.zod._def.values;
-        
+
         // Calculate counts if data is available
         let options = literals.map((m: any) => {
           const value = String(m);
           let count = 0;
-          
+
           if (data && data.length > 0) {
             count = data.filter(row => String(row[key]) === value).length;
           }
-          
+
           return {
             label: value.charAt(0).toUpperCase() + value.slice(1),
             value,
             ...(count > 0 && { count }),
           };
         });
-        
+
         return {
           label: baseLabel,
           variant: 'select' as const,
@@ -180,12 +180,12 @@ export function generateColumnsFromMeta(
           icon,
         };
       }
-      
+
       // ID fields that reference other tables (relation fields)
       if (field.relation) {
         const relatedData = relatedDataLookup[field.relation.table];
         const displayField = field.relation.displayField;
-        
+
         const options = relatedData.map((item: any) => ({
           label: displayField ? String(item[displayField] || item._id) : String(item._id),
           value: String(item._id),
@@ -201,7 +201,7 @@ export function generateColumnsFromMeta(
 
         return result;
       }
-      
+
       // Default to text
       return {
         label: baseLabel,
@@ -239,7 +239,7 @@ export function generateColumnsFromMeta(
               onDuplicate={(table.options.meta as any)?.duplicateRow}
             >
               <div className="w-full">
-                <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
+                <FieldRenderer field={field} value={value} onChange={() => { }} isForm={false} isEditing={false} />
               </div>
             </RowContextMenu>
           );
@@ -272,6 +272,8 @@ export function generateColumnsFromMeta(
 
         const triggerRef = useRef<HTMLDivElement>(null);
 
+        const helpText = (field.validation?.zod as any)?.description ?? (field.validation?.zod as any)?._def?.description;
+
         return (
           <PopoverForm
             open={popoverOpen}
@@ -292,6 +294,9 @@ export function generateColumnsFromMeta(
                     isEditing={true}
                     autoFocus={true}
                   />
+                  {helpText && (
+                    <p className="text-muted-foreground text-xs">{helpText}</p>
+                  )}
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <button
@@ -319,7 +324,7 @@ export function generateColumnsFromMeta(
                 className="w-full cursor-pointer rounded px-2 py-1 hover:bg-muted/50 min-h-[32px] flex items-center"
                 onClick={() => setPopoverOpen(true)}
               >
-                <FieldRenderer field={field} value={value} onChange={() => {}} isForm={false} isEditing={false} />
+                <FieldRenderer field={field} value={value} onChange={() => { }} isForm={false} isEditing={false} />
               </div>
             </RowContextMenu>
           </PopoverForm>
@@ -336,9 +341,9 @@ export function generateColumnsFromMeta(
     id: '__rowActions__',
     header: '',
     cell: ({ row, table }) => (
-      <ActionsCell 
-        row={row} 
-        tableName={tableName} 
+      <ActionsCell
+        row={row}
+        tableName={tableName}
         onEdit={(table.options.meta as any)?.openEdit}
         onDelete={(table.options.meta as any)?.deleteRow}
         onDuplicate={(table.options.meta as any)?.duplicateRow}
