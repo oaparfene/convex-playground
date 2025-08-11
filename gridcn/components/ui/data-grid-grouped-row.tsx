@@ -96,12 +96,9 @@ export function DataGridGroupedRow<TData>({ row }: { row: Row<TData> }) {
 }
 
 function formatGroupedValue<TData>(groupedCell?: Cell<TData, unknown>): string {
-    console.log("groupedCell", groupedCell);
   if (!groupedCell) return "";
   const raw = groupedCell.getValue();
-  console.log("raw", raw);
   const meta: any = (groupedCell.column.columnDef as any)?.meta;
-  console.log("meta", meta);
   // If options are provided (enum/relation), map value -> label
   if (meta?.options && Array.isArray(meta.options)) {
     // Handle array of values (multi-select)

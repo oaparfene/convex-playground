@@ -16,7 +16,10 @@ import {
   List,
   ChevronDown,
   Link,
-  type LucideIcon
+  type LucideIcon,
+  Binary,
+  CircleCheck,
+  ListCollapse
 } from 'lucide-react';
 import { renderMetaIcon } from '@/components/ui/data-grid-grouped-row';
 
@@ -31,12 +34,14 @@ export function formatFieldName(fieldName: string): string {
 
 // Helper function to get appropriate icon for field types
 function getFieldIcon(field: any, key: string): LucideIcon {
-  if (field.type.type === 'boolean') return ToggleLeft;
+  console.log("field", field);
+  if (field.type.type === 'boolean') return Binary;
   if (field.type.type === 'number' || field.type.type === 'bigint') return Hash;
-  if (key.toLowerCase().includes('time') || key.toLowerCase().includes('date')) return Calendar;
+  if (field.render.component === 'date' || field.render.component === 'datetime') return Calendar;
   if (field.type.type === 'array') return List;
-  if (field.type.type === 'union') return ChevronDown;
-  if (field.relation) return Link;
+  if (field.type.type === 'enum') return CircleCheck;
+  if (field.relation && field.relation.cardinality === 'many') return ListCollapse;
+  if (field.relation && field.relation.cardinality === 'one') return Link;
   return Text;
 }
 
