@@ -25,6 +25,7 @@ import { useActionBar } from "@/hooks/use-action-bar";
 import DataTableDynamicForms from "../data-table/data-table-dynamic-forms";
 import { DataTableActionBar, DataTableActionBarAction, DataTableActionBarSelection } from "../data-table/data-table-action-bar";
 import { Separator } from "@/components/ui/separator";
+import DataTableDynamicActionBar from "../data-table/data-table-dynamic-action-bar";
 
 interface DynamicDataGridProps {
   tableName: string;
@@ -244,33 +245,7 @@ export function DynamicDataGrid({
       </DataTableAdvancedToolbar>
 
       {/* Batch Action Bar */}
-      <DataTableActionBar table={table} >
-        <DataTableActionBarSelection table={table} />
-        <Separator orientation="vertical" className="hidden data-[orientation=vertical]:h-5 sm:block" />
-        
-        <DataTableBatchEditDialog
-          table={table}
-          tableName={tableName}
-          onBatchUpdate={actionBarBatchUpdate}
-        >
-          <DataTableActionBarAction>
-            <Copy />
-            Edit
-          </DataTableActionBarAction>
-        </DataTableBatchEditDialog>
-        
-        <DataTableExportPopover table={table}>
-          <DataTableActionBarAction>
-            <Download />
-            Export
-          </DataTableActionBarAction>
-        </DataTableExportPopover>
-        
-        <DataTableActionBarAction onClick={handleDeleteClick}>
-          <Trash />
-          Delete
-        </DataTableActionBarAction>
-      </DataTableActionBar>
+      <DataTableDynamicActionBar table={table} tableName={tableName} actionBarBatchUpdate={actionBarBatchUpdate} handleDeleteClick={handleDeleteClick} />
 
       {/* Grid Body */}
       <DataGrid
