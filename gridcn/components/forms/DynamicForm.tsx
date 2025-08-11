@@ -77,10 +77,12 @@ export function DynamicForm<TData>({ tableName, onSubmit, onCancel, initialValue
     }
   };
 
+  console.log("editableFields", editableFields);
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {editableFields.map(([name, field], index) => {
-        const column = columns[index];
+        const column = columns.find((c) => c.id === name);
         const helpText = (field.validation?.zod as any)?.description ?? (field.validation?.zod as any)?._def?.description;
         return (
           <div key={name} className="space-y-1">

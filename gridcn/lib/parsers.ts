@@ -71,11 +71,8 @@ export const getFiltersStateParser = <TData>(
   return createParser({
     parse: (value) => {
       try {
-        console.log("value", value);
         const parsed = JSON.parse(value);
-        console.log("parsed", parsed);
         const result = z.array(filterItemSchema).safeParse(parsed);
-        console.log("result", result);
         if (!result.success) return null;
 
         if (validKeys && result.data.some((item) => !validKeys.has(item.id))) {

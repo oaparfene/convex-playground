@@ -183,7 +183,6 @@ export function generateColumnsFromMeta(
       
       // ID fields that reference other tables (relation fields)
       if (field.relation) {
-        console.log("field.relation", field);
         const relatedData = relatedDataLookup[field.relation.table];
         const displayField = field.relation.displayField;
         
@@ -200,8 +199,6 @@ export function generateColumnsFromMeta(
           icon,
         }
 
-        console.log("result", result);
-        
         return result;
       }
       

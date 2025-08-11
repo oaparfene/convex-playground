@@ -116,7 +116,6 @@ export function DataTableFilterList<TData>({
         throttleMs,
       }),
   );
-  console.log("filters", filters);
   const debouncedSetFilters = useDebouncedCallback(setFilters, debounceMs);
 
   const [joinOperator, setJoinOperator] = useQueryState(
