@@ -18,6 +18,7 @@ import {
   Link,
   type LucideIcon
 } from 'lucide-react';
+import { renderMetaIcon } from '@/components/ui/data-grid-grouped-row';
 
 // Helper function to format field names for display
 export function formatFieldName(fieldName: string): string {
@@ -30,11 +31,11 @@ export function formatFieldName(fieldName: string): string {
 
 // Helper function to get appropriate icon for field types
 function getFieldIcon(field: any, key: string): LucideIcon {
-  if (field.type === 'boolean') return ToggleLeft;
-  if (field.type === 'number' || field.type === 'bigint') return Hash;
+  if (field.type.type === 'boolean') return ToggleLeft;
+  if (field.type.type === 'number' || field.type.type === 'bigint') return Hash;
   if (key.toLowerCase().includes('time') || key.toLowerCase().includes('date')) return Calendar;
-  if (field.type === 'array') return List;
-  if (field.type === 'union') return ChevronDown;
+  if (field.type.type === 'array') return List;
+  if (field.type.type === 'union') return ChevronDown;
   if (field.relation) return Link;
   return Text;
 }
@@ -218,9 +219,17 @@ export function generateColumnsFromMeta(
       id: key,
       enableColumnFilter: key !== '_id', // Enable filtering for all columns except _id
       meta: filterMeta,
-      header: ({ column }) => (
-        <DataGridColumnHeader title={field.render?.label || formatFieldName(key)} visibility={true} column={column} />
-      ),
+      header: ({ column }) => {
+        const Icon = (column.columnDef.meta as any)?.icon as ((props: { className?: string }) => React.ReactElement) | undefined;
+        return (
+          <DataGridColumnHeader
+            title={field.render?.label || formatFieldName(key)}
+            visibility={true}
+            column={column}
+            icon={Icon ? <Icon className="size-3.5 opacity-60" /> : undefined}
+          />
+        );
+      },
       cell: ({ row, table }) => {
         const value = row.original[key];
         const [popoverOpen, setPopoverOpen] = useState(false);

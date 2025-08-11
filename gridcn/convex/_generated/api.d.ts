@@ -14,7 +14,6 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as aircrafts from "../aircrafts.js";
-import type * as callsigns from "../callsigns.js";
 import type * as registry from "../registry.js";
 import type * as scheduledFlights from "../scheduledFlights.js";
 import type * as seed from "../seed.js";
@@ -30,7 +29,6 @@ import type * as sensors from "../sensors.js";
  */
 declare const fullApi: ApiFromModules<{
   aircrafts: typeof aircrafts;
-  callsigns: typeof callsigns;
   registry: typeof registry;
   scheduledFlights: typeof scheduledFlights;
   seed: typeof seed;

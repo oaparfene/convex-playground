@@ -30,6 +30,7 @@ import { restrictToParentElement } from '@dnd-kit/modifiers';
 import { horizontalListSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Cell, flexRender, Header, HeaderGroup, Row } from '@tanstack/react-table';
+import { DataGridGroupedRow, isGroupedRow } from '@/components/ui/data-grid-grouped-row';
 import { GripVertical } from 'lucide-react';
 
 function DataGridTableDndHeader<TData>({ header }: { header: Header<TData, unknown> }) {
@@ -148,20 +149,28 @@ function DataGridTableDnd<TData>({ handleDragEnd }: { handleDragEnd: (event: Dra
               table.getRowModel().rows.map((row: Row<TData>, index) => {
                 return (
                   <Fragment key={row.id}>
-                    <DataGridTableBodyRow row={row} key={index}>
-                      {row.getVisibleCells().map((cell: Cell<TData, unknown>) => {
-                        return (
-                          <SortableContext
-                            key={cell.id}
-                            items={table.getState().columnOrder}
-                            strategy={horizontalListSortingStrategy}
-                          >
-                            <DataGridTableDndCell cell={cell} />
-                          </SortableContext>
-                        );
-                      })}
-                    </DataGridTableBodyRow>
-                    {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
+                    {isGroupedRow(row) ? (
+                      <tr>
+                        <DataGridGroupedRow row={row} />
+                      </tr>
+                    ) : (
+                      <DataGridTableBodyRow row={row} key={index}>
+                        {row.getVisibleCells().map((cell: Cell<TData, unknown>) => {
+                          return (
+                            <SortableContext
+                              key={cell.id}
+                              items={table.getState().columnOrder}
+                              strategy={horizontalListSortingStrategy}
+                            >
+                              <DataGridTableDndCell cell={cell} />
+                            </SortableContext>
+                          );
+                        })}
+                      </DataGridTableBodyRow>
+                    )}
+                    {!isGroupedRow(row) && row.getIsExpanded() && (
+                      <DataGridTableBodyRowExpandded row={row} />
+                    )}
                   </Fragment>
                 );
               })

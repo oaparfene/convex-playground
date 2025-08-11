@@ -3,6 +3,7 @@ import { CSSProperties, Fragment, ReactNode } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataGrid } from '@/components/ui/data-grid';
 import { Cell, Column, flexRender, Header, HeaderGroup, Row } from '@tanstack/react-table';
+import { DataGridGroupedRow, isGroupedRow } from '@/components/ui/data-grid-grouped-row';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -453,20 +454,28 @@ function DataGridTable<TData>() {
               })}
             </DataGridTableBodyRowSkeleton>
           ))
-        ) : table.getRowModel().rows.length ? (
+          ) : table.getRowModel().rows.length ? (
           table.getRowModel().rows.map((row: Row<TData>, index) => {
             return (
               <Fragment key={row.id}>
-                <DataGridTableBodyRow row={row} key={index}>
-                  {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
-                    return (
-                      <DataGridTableBodyRowCell cell={cell} key={colIndex}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </DataGridTableBodyRowCell>
-                    );
-                  })}
-                </DataGridTableBodyRow>
-                {row.getIsExpanded() && <DataGridTableBodyRowExpandded row={row} />}
+                {isGroupedRow(row) ? (
+                  <tr>
+                    <DataGridGroupedRow row={row} />
+                  </tr>
+                ) : (
+                  <DataGridTableBodyRow row={row} key={index}>
+                    {row.getVisibleCells().map((cell: Cell<TData, unknown>, colIndex) => {
+                      return (
+                        <DataGridTableBodyRowCell cell={cell} key={colIndex}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </DataGridTableBodyRowCell>
+                      );
+                    })}
+                  </DataGridTableBodyRow>
+                )}
+                {!isGroupedRow(row) && row.getIsExpanded() && (
+                  <DataGridTableBodyRowExpandded row={row} />
+                )}
               </Fragment>
             );
           })

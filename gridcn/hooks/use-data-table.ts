@@ -4,8 +4,11 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  getGroupedRowModel,
+  getExpandedRowModel,
   PaginationState,
   SortingState,
+  GroupingState,
   useReactTable,
 } from '@tanstack/react-table';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -39,6 +42,7 @@ export function useDataTable({
     pageSize: 10,
   });
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [grouping, setGrouping] = useState<GroupingState>([]);
 
   const columns = useMemo(() => {
     const metaColumns = generateColumnsFromMeta(tableName, relatedDataLookup, data);
@@ -75,6 +79,7 @@ export function useDataTable({
     state: {
       pagination,
       sorting,
+      grouping,
       columnOrder,
     },
     meta: {
@@ -103,20 +108,26 @@ export function useDataTable({
     onColumnOrderChange: setColumnOrder,
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
+    onGroupingChange: setGrouping,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    groupedColumnMode: 'reorder',
   });
 
   return {
     table,
     pagination,
     sorting,
+    grouping,
     columnOrder,
     handleDragEnd,
     setPagination,
     setSorting,
+    setGrouping,
     setColumnOrder,
   };
 }

@@ -16,15 +16,12 @@ import { api } from "@/convex/_generated/api";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { DataTableGroupList } from "@/components/data-table/data-table-group-list";
 import { DataTableDeleteDialog } from "@/components/data-table/data-table-delete-dialog";
-import { DataTableExportPopover } from "@/components/data-table/dynamic/data-table-dynamic-export-popover";
-import { DataTableBatchEditDialog } from "@/components/data-table/dynamic/data-table-dynamic-batch-edit-dialog";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useActionBar } from "@/hooks/use-action-bar";
 import DataTableDynamicForms from "./data-table-dynamic-forms";
-import { DataTableActionBar, DataTableActionBarAction, DataTableActionBarSelection } from "../data-table-action-bar";
-import { Separator } from "@/components/ui/separator";
 import DataTableDynamicActionBar from "./data-table-dynamic-action-bar";
 
 interface DynamicDataGridProps {
@@ -238,6 +235,7 @@ export function DynamicDataGrid({
         </div>
         <DataTableFilterList table={table} />
         <DataTableSortList table={table} />
+        <DataTableGroupList table={table} />
         <Button onClick={() => setShowAddModal(true)} className="ml-auto">
           <Plus />
           New record

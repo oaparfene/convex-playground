@@ -51,7 +51,7 @@ export function ActionsCell({
         <DropdownMenuContent side="bottom" align="end">
         <DropdownMenuLabel className="flex items-center gap-2">
           <span className="text-muted-foreground text-xs">ROW ID:</span>
-          <span className="font-mono text-xs truncate max-w-[120px] text-black" title={idStr}>
+          <span className="font-mono text-xs truncate max-w-[120px] text-foreground" title={idStr}>
             {displayId}
           </span>
           <Button

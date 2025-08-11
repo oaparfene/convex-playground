@@ -1,9 +1,11 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import { callsignsConvexFields } from "./callsigns";
 
 export default defineSchema({
-  callsigns: defineTable(callsignsConvexFields),
+  callsigns: defineTable({
+    name: v.string(),
+    country: v.string(),
+  }),
   sensors: defineTable({
     name: v.string(),
     type: v.string(),
@@ -27,19 +29,19 @@ export default defineSchema({
     start_time: v.string(),
     end_time: v.string(),
   }),
-  rendererSamples: defineTable({
-    text: v.string(),
-    textarea: v.string(),
-    number: v.number(),
-    boolean: v.boolean(),
-    date: v.string(),
-    datetime: v.string(),
-    select: v.string(),
-    id_select: v.string(),
-    id_multi_select: v.array(v.string()),
-    json: v.any(),
-    color: v.string(),
-    obj: v.any(),
-    arr: v.any(),
-  }),
+  // rendererSamples: defineTable({
+  //   text: v.string(),
+  //   textarea: v.string(),
+  //   number: v.number(),
+  //   boolean: v.boolean(),
+  //   date: v.string(),
+  //   datetime: v.string(),
+  //   select: v.string(),
+  //   id_select: v.string(),
+  //   id_multi_select: v.array(v.string()),
+  //   json: v.any(),
+  //   color: v.string(),
+  //   obj: v.any(),
+  //   arr: v.any(),
+  // }),
 });
