@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { DynamicFormDialog } from "../forms/DynamicFormDialog";
+import { DynamicFormDialog } from "../../forms/DynamicFormDialog";
 import { Table } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";

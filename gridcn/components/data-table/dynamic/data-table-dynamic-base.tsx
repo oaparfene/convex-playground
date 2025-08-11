@@ -17,15 +17,15 @@ import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-adv
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { DataTableDeleteDialog } from "@/components/data-table/data-table-delete-dialog";
-import { DataTableExportPopover } from "@/components/data-table/data-table-export-popover";
-import { DataTableBatchEditDialog } from "@/components/data-table/data-table-batch-edit-dialog";
+import { DataTableExportPopover } from "@/components/data-table/dynamic/data-table-dynamic-export-popover";
+import { DataTableBatchEditDialog } from "@/components/data-table/dynamic/data-table-dynamic-batch-edit-dialog";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useTableFilters } from "@/hooks/use-table-filters";
 import { useActionBar } from "@/hooks/use-action-bar";
-import DataTableDynamicForms from "../data-table/data-table-dynamic-forms";
-import { DataTableActionBar, DataTableActionBarAction, DataTableActionBarSelection } from "../data-table/data-table-action-bar";
+import DataTableDynamicForms from "./data-table-dynamic-forms";
+import { DataTableActionBar, DataTableActionBarAction, DataTableActionBarSelection } from "../data-table-action-bar";
 import { Separator } from "@/components/ui/separator";
-import DataTableDynamicActionBar from "../data-table/data-table-dynamic-action-bar";
+import DataTableDynamicActionBar from "./data-table-dynamic-action-bar";
 
 interface DynamicDataGridProps {
   tableName: string;

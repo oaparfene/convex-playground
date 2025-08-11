@@ -5,8 +5,8 @@ import { DataGridTableRowSelect, DataGridTableRowSelectAll } from '@/components/
 import { PopoverForm, PopoverFormButton } from '@/components/ui/popover-form';
 import { FieldRenderer } from '@/components/field-renderer/FieldRenderer';
 import { Registry } from '@/lib/registry';
-import { ActionsCell } from '@/components/data-grid/actions-cell';
-import { RowContextMenu } from '@/components/data-grid/row-context-menu';
+import { ActionsCell } from '@/components/data-table/dynamic/data-table-dynamic-actions-cell';
+import { RowContextMenu } from '@/components/data-table/dynamic/data-table-dynamic-row-context-menu';
 import {
   Text,
   Hash,

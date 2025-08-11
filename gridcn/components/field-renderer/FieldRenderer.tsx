@@ -16,7 +16,7 @@ import { ColorField } from './renderers/ColorField';
 import { ObjectField } from './renderers/ObjectField';
 import { ArrayField } from './renderers/ArrayField';
 import { Column } from '@tanstack/react-table';
-import { formatFieldName } from '@/lib/generate-columns';
+import { formatFieldName } from '@/components/data-table/dynamic/data-table-dynamic-generate-columns';
 
 export type FieldRendererProps = {
   column?: Column<any>;

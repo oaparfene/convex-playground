@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-table';
 import { arrayMove } from '@dnd-kit/sortable';
 import { DragEndEvent } from '@dnd-kit/core';
-import { generateColumnsFromMeta } from '@/lib/generate-columns';
+import { generateColumnsFromMeta } from '@/components/data-table/dynamic/data-table-dynamic-generate-columns';
 import { toast } from 'sonner';
 
 export interface UseDataTableProps {

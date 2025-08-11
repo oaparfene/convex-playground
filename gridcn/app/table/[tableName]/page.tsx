@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { genericListQuery } from "@/lib/registry/queries";
-import { DynamicDataGrid } from "@/components/data-grid/dynamic-crud";
+import { DynamicDataGrid } from "@/components/data-table/dynamic/data-table-dynamic-base";
 
 export default function TablePage() {
   const params = useParams<{ tableName: string }>();

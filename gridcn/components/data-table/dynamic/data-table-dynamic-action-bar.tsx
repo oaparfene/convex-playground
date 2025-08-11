@@ -1,8 +1,8 @@
-import { DataTableActionBar } from "./data-table-action-bar";
-import { DataTableActionBarSelection } from "./data-table-action-bar";
-import { DataTableBatchEditDialog } from "./data-table-batch-edit-dialog";
-import { DataTableExportPopover } from "./data-table-export-popover";
-import { DataTableActionBarAction } from "./data-table-action-bar";
+import { DataTableActionBar } from "../data-table-action-bar";
+import { DataTableActionBarSelection } from "../data-table-action-bar";
+import { DataTableBatchEditDialog } from "./data-table-dynamic-batch-edit-dialog";
+import { DataTableExportPopover } from "./data-table-dynamic-export-popover";
+import { DataTableActionBarAction } from "../data-table-action-bar";
 import { Separator } from "@/components/ui/separator";
 import { Copy, Download, Edit, Trash } from "lucide-react";
 import { Table } from "@tanstack/react-table";

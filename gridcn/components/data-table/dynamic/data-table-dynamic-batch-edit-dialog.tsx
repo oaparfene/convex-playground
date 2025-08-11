@@ -29,7 +29,7 @@ import { toast } from "sonner";
 import type { Table } from "@tanstack/react-table";
 import { Registry } from "@/lib/registry";
 import { FieldRenderer } from "@/components/field-renderer/FieldRenderer";
-import { formatFieldName } from "@/lib/generate-columns";
+import { formatFieldName } from "@/components/data-table/dynamic/data-table-dynamic-generate-columns";
 
 interface DataTableBatchEditDialogProps<TData> {
   table: Table<TData>;
