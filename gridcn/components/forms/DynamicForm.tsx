@@ -77,8 +77,6 @@ export function DynamicForm<TData>({ tableName, onSubmit, onCancel, initialValue
     }
   };
 
-  console.log("editableFields", editableFields);
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {editableFields.map(([name, field], index) => {

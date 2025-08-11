@@ -31,8 +31,6 @@ export function DynamicFormDialog({
   const tableLabel = Registry.describe().tables[tableName]?.label || tableName;
   const computedTitle = title ?? (mode === 'edit' ? `Edit ${tableLabel}` : `New ${tableLabel}`);
 
-  console.log("initialValues", initialValues);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl w-full h-[80vh] p-0 overflow-hidden">
